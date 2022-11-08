@@ -1,6 +1,6 @@
-import XDialog from './components/x/dialog/XDialog'
-import XDialogLink from './components/x/dialog-link/XDialogLink'
-import XLink from './components/x/link/XLink'
+import XDialog from './components/x/dialog/XDialog.vue'
+import XDialogLink from './components/x/dialog-link/XDialogLink.vue'
+import XLink from './components/x/link/XLink.vue'
 
 const version = __UI_VERSION__
 
