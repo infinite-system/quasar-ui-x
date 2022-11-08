@@ -1,5 +1,6 @@
+<script>export default { name: 'XLink'}</script>
 <script setup>
-import { computed, useAttrs } from 'vue'
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 
 const props = defineProps({
@@ -10,8 +11,6 @@ const props = defineProps({
 const isExternal = computed(() => {
   return typeof props.to === 'string' && props.to.startsWith('http')
 })
-// const attrs = useAttrs();
-// console.log('xlinkprops', props, attrs)
 </script>
 <template>
   <a v-if="isExternal"

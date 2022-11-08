@@ -8,7 +8,7 @@ import mergeDeep from './utils/merge-deep'
 import prop from './utils/prop'
 import size from './utils/size'
 import sleep from './utils/sleep'
-import smartImport from './utils/smart-import'
+// import smartImport from './utils/smart-import'
 import onFrame from './utils/on-frame'
 
 export {
@@ -29,6 +29,6 @@ export {
   prop,
   size,
   sleep,
-  smartImport,
+  // smartImport,
   onFrame
 }

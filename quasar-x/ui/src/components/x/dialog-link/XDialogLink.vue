@@ -1,10 +1,11 @@
+<script>export default { name: 'XDialogLink' }</script>
 <script setup>
 import { useRoute, useRouter } from "vue-router";
 import { RouterLink } from 'vue-router'
-import { logify, log, isFunction } from '@/x/utils'
-import XLink from '@/x/link/XLink.vue'
+import { logify, log, isFunction } from '../../../utils'
+import XLink from '../link/XLink.vue'
 import { QBtn } from "quasar";
-import { dialogHideAsync } from "@/x/dialog/XDialogHelpers";
+import { dialogHideAsync } from "../dialog/XDialogHelpers";
 
 const props = defineProps({
   ...RouterLink.props,
@@ -89,15 +90,15 @@ async function linkHandler(event, { href, route: to, navigate }) {
 
   getRouteDefinitions(flatRoutes, router.options.routes, [route.name, to.name])
 
- log('+++ flatRoutes', flatRoutes)
- log('+++ router', logify(router))
- log('+++ route', logify(route))
- log('+++ to', logify(to))
+  log('+++ flatRoutes', flatRoutes)
+  log('+++ router', logify(router))
+  log('+++ route', logify(route))
+  log('+++ to', logify(to))
 
   if (isChild(route, to.name)) {
 
-   log('+++ isChild')
-   log('+++ navigate seamlessly')
+    log('+++ isChild')
+    log('+++ navigate seamlessly')
 
     navigate(event)
 
@@ -106,8 +107,8 @@ async function linkHandler(event, { href, route: to, navigate }) {
     let sibling = getRouteDefinition(flatRoutes, to.name)
     let current = getRouteDefinition(flatRoutes, route.name)
 
-   log('+++ isSibling', sibling, sibling.component?.__file)
-   log('+++ current', current, current.component?.__file)
+    log('+++ isSibling', sibling, sibling.component?.__file)
+    log('+++ current', current, current.component?.__file)
 
     // if ('components' in current){
     //   if (props.routerView in current.components) {
@@ -123,14 +124,14 @@ async function linkHandler(event, { href, route: to, navigate }) {
     // check if sibling is same module
     if (current.component?.__file === sibling.component?.__file) {
 
-     log('+++ sibling component files are the same ' + sibling.component?.__file)
+      log('+++ sibling component files are the same ' + sibling.component?.__file)
 
       let siblingProps = isFunction(sibling.props) ? sibling.props(to) : sibling.props;
 
       // we need to restart the component
       if (siblingProps?.routerRestart) {
 
-       log('+++ sibling requires router restart meaning the re-render of the component')
+        log('+++ sibling requires router restart meaning the re-render of the component')
         await hideDialogNavigate(props.dialog, navigate, event)
 
         // show dialog with new content
@@ -138,17 +139,17 @@ async function linkHandler(event, { href, route: to, navigate }) {
 
       } else {
 
-       log('+++ sibling does not require restart, seamless navigation and render of component withou restarting')
+        log('+++ sibling does not require restart, seamless navigation and render of component withou restarting')
         navigate(event)
       }
 
     } else {
-     log('+++ sibling component files are NOT the same ' + sibling.component?.__file + ' != ' + current.component?.__file)
-     log('+++ wait for hide and navigate to the next route')
+      log('+++ sibling component files are NOT the same ' + sibling.component?.__file + ' != ' + current.component?.__file)
+      log('+++ wait for hide and navigate to the next route')
       await hideDialogNavigate(props.dialog, navigate, event)
     }
   } else {
-   log('+++ not sibling or child, just wait for dialog to hide')
+    log('+++ not sibling or child, just wait for dialog to hide')
     await hideDialogNavigate(props.dialog, navigate, event)
   }
 }

@@ -1,9 +1,10 @@
 <template>
   <q-page padding>
-    
-    <X />
-    
-    
+
+    hello
+    <x-dialog :options="{title:'hello',message:'amazing!',cancel:true}" />
+
+
   </q-page>
 </template>
 
