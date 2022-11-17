@@ -1,68 +1,14 @@
-<script>
-export default {
-  name: 'XDialog',
-  inheritAttrs: false
-}
-</script>
+<script>export default { name: 'XDialog', inheritAttrs: false }</script>
 <script setup>
 import { ref, watch, computed, toRefs, onBeforeUnmount, useSlots, isRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { QBtn, useQuasar } from 'quasar'
-import { keepAlive, warn, mergeDeep, log, byId, size, onFrame, extractData, isPromise } from '../../../utils.js'
+import { keepAlive, warn, mergeDeep, log, byId, size, onFrame, extractData, smartImport } from '../utils.js'
 import {
   dialogId, dialogRemove, dialogWrap, dialogOptionsFromString, dialogRouter,
   dialogRedirect, dialogEmit, dialogHideAsync, dialogSetButtonDefaults,
   dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow
 } from "./XDialogHelpers";
-import { defineAsyncComponent, defineComponent, h, markRaw } from "vue";
-
- function customAsyncComponent(component) {
-  return defineAsyncComponent({
-    loader: component,
-
-    loadingComponent: defineComponent({
-      setup() {
-        return () => h('div', { 'style': 'padding:20px' }, 'Loading...')
-      }
-    }),
-
-    errorComponent: defineComponent({
-      setup() {
-        return () => h('div', 'Error: Cannot find component' + component)
-      }
-    })
-  })
-}
-
- function smartImport(component) {
-
-  let c = component;
-
-  switch (typeof component) {
-    case 'function': // it's an async () => import('...')
-      c = customAsyncComponent(component)
-      break;
-    case 'object':
-      c = isPromise(component)
-          ? customAsyncComponent(() => component) // it's an import('../ComponentName...')
-          : component // direct import by name ComponentName
-      break;
-    case 'string':
-      c = customAsyncComponent(() => import(`../${component}.vue`))
-      break;
-  }
-
-  // markRaw to make component object non reactive
-  return markRaw(c);
-}
-
-
-const $q = useQuasar()
-
-const vueRouter = useRouter()
-const vueRoute = useRoute()
-
-const slots = useSlots()
 
 const props = defineProps({
   id: { default: '', type: String },
@@ -77,6 +23,14 @@ const props = defineProps({
 
 const { modelValue, options, component, componentProps, router } = toRefs(props)
 
+const $q = useQuasar()
+
+const vueRouter = useRouter()
+const vueRoute = useRoute()
+
+const slots = useSlots()
+
+// define local variables
 const localShow = ref(modelValue.value)
 const localComponent = ref(component.value)
 const localComponentProps = ref(componentProps.value)
@@ -122,7 +76,7 @@ function prepareOptions(defaults, options, initialLoad = true) {
   if ('component' in options) {
     if (initialLoad) {
       warn("XDialog warning: trying to set 'component' through options, 'component' should be set through XDialog props. " +
-        "'component' can be updated through dialog.update() function, but cannot be set as options on intial load.")
+          "'component' can be updated through dialog.update() function, but cannot be set as options on intial load.")
     } else {
       // only updates change component
       setComponent(options.component)
@@ -132,12 +86,13 @@ function prepareOptions(defaults, options, initialLoad = true) {
   if ('componentProps' in options) {
     if (initialLoad) {
       warn("XDialog warning: trying to set 'componentProps' through options, 'componentProps' should be set through props. " +
-        "'componentProps' can be updated through dialog.update() function, but cannot be set as options on intial load.")
+          "'componentProps' can be updated through dialog.update() function, but cannot be set as options on intial load.")
     } else {
       // only updates change component props
       setComponentProps(options.componentProps)
     }
   }
+
 
   let dialogOptions = {}
   mergeDeep(dialogOptions, defaults, options)
@@ -150,9 +105,9 @@ function prepareOptions(defaults, options, initialLoad = true) {
   // then it goes back to the component definition and displays
   // the component
   if (!('message' in options)
-    || options?.message === undefined
-    || options?.message === null
-    || options?.message === '') {
+      || options?.message === undefined
+      || options?.message === null
+      || options?.message === '') {
     dialogOptions.message = dialogWrap(id, '')
   } else {
     dialogOptions.message = options.message + dialogWrap(id, '')
@@ -242,11 +197,11 @@ const xDialog = {
 }
 
 function ok(formData, event, callback = () => {}) {
-  return callback(okCancel('ok', formData, event))
+  return callback(dialogOkCancel('ok', formData, event))
 }
 
 function cancel(formData, event, callback = () => {}) {
-  return callback(okCancel('cancel', formData, event))
+  return callback(dialogOkCancel('cancel', formData, event))
 }
 
 function dialogExists() { return qDialog && byId(id) }
@@ -328,8 +283,6 @@ function dismiss() {
   isHiding = false
 }
 
-log('render dialog', id)
-
 // Custom update function for XDialog
 
 function update(options) {
@@ -339,8 +292,8 @@ function update(options) {
   }
 
   if (('component' in options && size(options) === 1)
-    || ('componentProps' in options && size(options) === 1)
-    || ('component' in options && 'componentProps' in options && size(options) === 2)
+      || ('componentProps' in options && size(options) === 1)
+      || ('component' in options && 'componentProps' in options && size(options) === 2)
   ) {
     return xDialog
   }
@@ -383,6 +336,7 @@ function mount() {
   dialogRemove(id)
 
   // Create QDialog
+  console.log('$q', $q)
   qDialog = $q.dialog(dialogOptions)
 
   // Set the main dismiss event
@@ -394,6 +348,17 @@ function mount() {
     isMounted.value = true
   })
 }
+
+function fullMount() {
+  onFrame(() => { // onFrame is a MUST here
+    setShow(true)
+    runShowCallbacks()
+    namedEmit('show', xDialog)
+    setOkCancelCallbacks()
+  })
+}
+
+watch(isMounted, () => isMounted.value ? fullMount() : null);
 
 function setShow(value) {
   localShow.value = value
@@ -428,14 +393,14 @@ function setButtonEvents(type) {
     btnEvents.forEach(e => btn.removeEventListener(e.type, e.listener, e.useCapture))
 
     // add proper callbacks
-    btn.addEventListener('click', (event) => okCancel(type, event), false)
+    btn.addEventListener('click', (event) => dialogOkCancel(type, event), false)
 
     // re-add the listeners
     btnEvents.forEach(e => btn.addEventListener(e.type, e.listener, e.args))
   })
 }
 
-function okCancel(type, event) {
+function dialogOkCancel(type, event) {
 
   let formData = extractData(xDialog.getDOM().inner())
 
@@ -471,21 +436,11 @@ function runShowCallbacks() {
 watch(localShow, () => localShow.value ? mount() : hide(), { immediate: true })
 watch(modelValue, () => localShow.value = modelValue.value, { immediate: true })
 
-function fullMount() {
-  onFrame(() => { // onFrame is a MUST here
-    setShow(true)
-    runShowCallbacks()
-    namedEmit('show', xDialog)
-    setOkCancelCallbacks()
-  })
-}
-
-watch(isMounted, () => isMounted.value ? fullMount() : null);
 
 watch(options, () => dialogExists()
-    ? update(options.value)
-    : dialogOptions = prepareOptions(dialogOptions, options.value, false),
-  { deep: true }
+        ? update(options.value)
+        : dialogOptions = prepareOptions(dialogOptions, options.value, false),
+    { deep: true }
 );
 
 watch(component, () => localComponent.value = component.value, { immediate: true })
@@ -517,6 +472,7 @@ watch(componentProps, () => localComponentProps.value = componentProps.value, { 
 
 defineExpose(xDialog)
 </script>
+
 <template>
   <component v-if="hasButton && button"
              :is="button"

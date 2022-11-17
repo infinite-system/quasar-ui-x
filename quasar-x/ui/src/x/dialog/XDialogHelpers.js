@@ -1,7 +1,5 @@
-import { isObject, log, isFunction, sleep } from '../../../utils'
-// For Android Mobile fix nav bar overflowing the text
-// we need to implement a resize sensor:
 import ResizeSensor from "css-element-queries/src/ResizeSensor";
+import { isObject, log, isFunction, sleep } from '../utils'
 
 let uniqueDialogId = 1
 export function dialogId() {
@@ -9,17 +7,28 @@ export function dialogId() {
 }
 
 export function dialogOptionsFromString(options) {
-  return typeof options === 'string' ? JSON.parse(options) : options
+  if (typeof options === 'string') {
+    return JSON.parse(options)
+  } else {
+    return options
+  }
 }
 
 export function dialogRemove(dialogId) {
   let dialogContent = document.getElementById(dialogId);
-  dialogContent?.closest('[data-v-app]')?.remove() && dialogContent?.remove()
+  if (dialogContent) {
+    // get the QDialog component wrapper DOM element
+    dialogContent.closest('[data-v-app]').remove()
+    dialogContent.remove()
+    return true
+  }
+  return false
 }
 
 export function dialogWrap(dialogId, message = '') {
   return `<div id="${dialogId}">${message}</div>`
 }
+
 
 export function dialogSetButtonDefaults(defaults, options, btnDefaults) {
   for (let btn in btnDefaults) {

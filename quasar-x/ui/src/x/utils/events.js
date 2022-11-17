@@ -1,12 +1,22 @@
-
+/**
+ * Extends DOM element to be able to extract events that are registered to it
+ * Extends with element with following methods:
+ * element.addEventListener()
+ * element.removeEventListener()
+ * element.getEventListeners()
+ * @adopted from https://stackoverflow.com/a/35235801/1502706
+ */
 let ListenerTracker = new function () {
+
   let targets = [];
   // listener tracking datas
   let _elements_ = [];
   let _listeners_ = [];
+
   this.init = function () {
     this.listen(Element, window);
   };
+
   this.listen = function () {
     for (let i = 0; i < arguments.length; i++) {
       if (targets.indexOf(arguments[i]) === -1) {
@@ -25,12 +35,12 @@ let ListenerTracker = new function () {
     }
     return _listeners_[_elements_.indexOf(element)];
   };
+
   let intercep_events_listeners = function (target) {
     let _target = target;
     if (target.prototype) _target = target.prototype;
     if (_target.getEventListeners) return;
     if (typeof (_target.addEventListener) !== 'function' || typeof (_target.removeEventListener) !== 'function') {
-      console.log('target=', target);
       throw('\nListenerTracker Error:\nUnwrappable target.');
     }
     // backup overrided methods
@@ -48,6 +58,7 @@ let ListenerTracker = new function () {
       if (!listeners[uc][type]) listeners[uc][type] = [];
       listeners[uc][type].push({ cb: listener, args: arguments });
     };
+
     _target["removeEventListener"] = function (type, listener, useCapture) {
       let listeners = register_element(this);
       // add event before to avoid registering if an error is thrown
@@ -58,6 +69,7 @@ let ListenerTracker = new function () {
       let lid = listeners[useCapture][type].findIndex(obj => obj.cb === listener);
       if (lid > -1) listeners[useCapture][type].splice(lid, 1);
     };
+
     _target["getEventListeners"] = function (type) {
       let listeners = register_element(this);
       // convert to listener datas list

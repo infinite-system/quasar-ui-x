@@ -1,7 +1,7 @@
 import { createApp, createVNode, render } from "vue";
 
 // @adopted from https://stackoverflow.com/questions/69488256/vue-3-append-component-to-the-dom-best-practice
-export default function create({ el, component, props, appContext }) {
+export default function createAppComponent({ el, component, props, appContext }) {
 
   let app = createApp(component, props)
 
@@ -18,6 +18,8 @@ export default function create({ el, component, props, appContext }) {
   return mounted
 }
 
+// @adopted from https://stackoverflow.com/questions/69488256/vue-3-append-component-to-the-dom-best-practice
+// TODO: needs to be reworked, prefer
 export function renderComponent({ el, component, props, appContext }) {
 
   let vnode = createVNode(component, props)

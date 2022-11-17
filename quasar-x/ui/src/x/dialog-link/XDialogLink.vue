@@ -2,7 +2,7 @@
 <script setup>
 import { useRoute, useRouter } from "vue-router";
 import { RouterLink } from 'vue-router'
-import { logify, log, isFunction } from '../../../utils'
+import { logify, log, isFunction } from '../utils'
 import XLink from '../link/XLink.vue'
 import { QBtn } from "quasar";
 import { dialogHideAsync } from "../dialog/XDialogHelpers";

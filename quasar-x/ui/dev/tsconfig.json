@@ -1,0 +1,68 @@
+{
+  "mode": "development",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+//    "allowJs": true,
+    "sourceMap": true,
+    "target": "es2020",
+    //wa es6 - but only se5 work on Cordova
+    "strict": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "noImplicitThis": true,
+    "isolatedModules": true,
+    "module": "es2020",
+    // "module": "es2015",
+    "moduleResolution": "node",
+    "baseUrl": ".",
+//    "types": [
+//      "quasar",
+//      "node"
+//    ],
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "src/*": [
+        "src/*"
+      ],
+      "app/*": [
+        "*"
+      ],
+      "components/*": [
+        "src/components/*"
+      ],
+      "layouts/*": [
+        "src/layouts/*"
+      ],
+      "pages/*": [
+        "src/pages/*"
+      ],
+      "assets/*": [
+        "src/assets/*"
+      ],
+      "boot/*": [
+        "src/boot/*"
+      ],
+      "stores/*": [
+        "src/stores/*"
+      ],
+      "vue$": [
+        "node_modules/vue/dist/vue.runtime.esm-bundler.js"
+      ]
+    }
+  },
+//  "types": [
+//    "/index.d.ts"
+//  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src-cordova",
+    ".quasar"
+  ],
+  "include": [
+    "src/**/*"
+  ]
+}
