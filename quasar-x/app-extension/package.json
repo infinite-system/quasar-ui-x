@@ -1,6 +1,6 @@
 {
   "name": "quasar-app-extension-x",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "System X advanced UI built on top of Quasar",
   "author": "Evgeny Kalashnikov <ekalashnikov@gmail.com>",
   "license": "MIT",
@@ -12,7 +12,7 @@
   "bugs": "https://github.com/infinite-system/x/issues",
   "homepage": "",
   "dependencies": {
-    "quasar-ui-x": "^0.2.2"
+    "quasar-ui-x": "lastest"
   },
   "engines": {
     "node": ">= 8.9.0",
