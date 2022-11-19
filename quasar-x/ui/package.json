@@ -1,12 +1,12 @@
 {
   "name": "quasar-ui-x",
-  "version": "0.3.73",
+  "version": "0.3.74",
   "author": "Evgeny Kalashnikov <ekalashnikov@gmail.com>",
   "description": "System X components for Quasar",
   "license": "MIT",
   "module": "dist/index.esm.js",
   "main": "dist/index.common.js",
-  "typyings": "scr/x/types/x.d.ts",
+  "typings": "scr/x/types/x.d.ts",
   "scripts": {
     "dev": "cd dev && yarn dev && cd ..",
     "dev:umd": "yarn build && node build/script.open-umd.js",
