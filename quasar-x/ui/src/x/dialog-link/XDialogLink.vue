@@ -5,19 +5,18 @@ import { RouterLink } from 'vue-router'
 import { logify, log, isFunction } from '../utils'
 import XLink from '../link/XLink.vue'
 import { QBtn } from "quasar";
-import { dialogHideAsync } from "../dialog/XDialogHelpers";
 
 const props = defineProps({
   ...RouterLink.props,
   trigger: { default: 'a', type: [String, QBtn] },
-  dialog: { required: true },
+  dialog: { required: true, type: Object },
   routerView: { default: 'default', type: String },
 })
 
 const router = useRouter()
 const route = useRoute()
 
-function isAncestor(routes, name, recursive = true) {
+function isAncestor (routes, name, recursive = true) {
   if (!routes?.length) return false
   if (name === '' || name === null || name === undefined) return false
   for (let route of routes) {
@@ -29,7 +28,7 @@ function isAncestor(routes, name, recursive = true) {
   return false
 }
 
-function isChild(route, to) {
+function isChild (route, to) {
 
   let currentIndex = route.matched.length - 1
   let currentRoute = route.matched[currentIndex]
@@ -37,7 +36,7 @@ function isChild(route, to) {
   return isAncestor(currentRoute?.children, to, true /*recursive*/);
 }
 
-function isSibling(route, to) {
+function isSibling (route, to) {
   if (to === undefined || to == null || to === '') return false
 
   let parentIndex = route.matched.length - 2
@@ -46,13 +45,13 @@ function isSibling(route, to) {
   return isAncestor(parentRoute?.children, to, false /*not recursive*/);
 }
 
-function getRouteDefinition(flatRoutes, to) {
+function getRouteDefinition (flatRoutes, to) {
   if (to in flatRoutes) {
     return flatRoutes[to]
   }
 }
 
-function getRouteDefinitions(flatRoutes = {}, routes, required = []) {
+function getRouteDefinitions (flatRoutes = {}, routes, required = []) {
 
   if (typeof routes !== 'object') return
 
@@ -75,16 +74,16 @@ function getRouteDefinitions(flatRoutes = {}, routes, required = []) {
   return flatRoutes
 }
 
-async function hideDialogNavigate(dialog, navigate, event) {
+async function hideDialogNavigate (dialog, navigate, event) {
 
   event.preventDefault();
 
-  await dialogHideAsync(dialog)
+  await dialog.hideAsync({ command: 'preventDismissRedirect' })
 
   navigate(event.originalEvent)
 }
 
-async function linkHandler(event, { href, route: to, navigate }) {
+async function linkHandler (event, { href, route: to, navigate }) {
 
   let flatRoutes = {}
 

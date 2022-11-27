@@ -6,5 +6,6 @@
  */
 
 module.exports = function (api) {
-  //
+  // copy boot folder contents to have install script there
+  api.render('./render')
 }

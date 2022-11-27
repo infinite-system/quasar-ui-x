@@ -6,6 +6,7 @@ const webpack = require('webpack')
 
 module.exports = function (ctx) {
   return {
+    supportTS: true,
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     boot: [
@@ -46,10 +47,20 @@ module.exports = function (ctx) {
 
     // Full list of options: https://quasar.dev/quasar-cli/quasar-conf-js#Property%3A-build
     build: {
+
+      // target: {
+      //   browser: ['es2021', 'edge88', 'firefox78', 'chrome87', 'safari13.1'],
+      //   node: 'node16'
+      // },
+
+      // extendViteConf(viteConf, { isServer, isClient }) {
+
+      // },
       vueRouterMode: 'history',
 
-      chainWebpack (chain) {
+      chainWebpack(chain) {
         chain.resolve.alias.merge({
+          '@': path.resolve(__dirname, `src`),
           ui: path.resolve(__dirname, `../src/index.esm.js`)
         })
 
@@ -62,7 +73,7 @@ module.exports = function (ctx) {
 
     devServer: {
       // port: 8080,
-      open: true // opens browser window automatically
+      open: false // opens browser window automatically
     },
 
     ssr: {

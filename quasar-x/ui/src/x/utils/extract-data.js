@@ -1,6 +1,6 @@
 import warn from './log'
 
-export function extractDataQuery(element) {
+export function extractQuery(element) {
 
   element = typeof element === 'string' ? document.querySelector(element) : element
 

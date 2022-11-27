@@ -2,6 +2,7 @@ import { boot } from 'quasar/wrappers'
 import X, { resolveImport } from 'quasar-ui-x'
 
 export default boot(({ app }) => {
+
   // We need to pass a function as a prop
   // it has to be a blank function itself
   // returning the function to pass through Vue 3

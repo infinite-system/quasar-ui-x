@@ -17,3 +17,7 @@ export function isPromise(p) {
     typeof p.then === 'function' &&
     typeof p.catch === 'function';
 }
+
+export function isString(s){
+  return typeof s === 'string'
+}

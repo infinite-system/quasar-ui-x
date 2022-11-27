@@ -1,36 +1,32 @@
 import ResizeSensor from "css-element-queries/src/ResizeSensor";
-import { isObject, log, isFunction, sleep } from '../utils'
+import { isObject, log, isFunction, createComponent, extractData } from '../utils'
+import { h, isRef } from 'vue'
+import XDialog from './XDialog.vue'
 
 let uniqueDialogId = 1
-export function dialogId() {
+
+export function dialogId () {
   return uniqueDialogId++
 }
 
-export function dialogOptionsFromString(options) {
-  if (typeof options === 'string') {
-    return JSON.parse(options)
-  } else {
-    return options
-  }
+export function optionsFromString (options) {
+  return typeof options === 'string' ? JSON.parse(options) : options
 }
 
-export function dialogRemove(dialogId) {
-  let dialogContent = document.getElementById(dialogId);
-  if (dialogContent) {
+export function remove (dialogId) {
+  const domContent = document.getElementById(dialogId);
+  if (domContent) {
     // get the QDialog component wrapper DOM element
-    dialogContent.closest('[data-v-app]').remove()
-    dialogContent.remove()
-    return true
+    domContent.closest('[data-v-app]').remove()
+    domContent.remove()
   }
-  return false
 }
 
-export function dialogWrap(dialogId, message = '') {
+export function wrap (dialogId, message = '') {
   return `<div id="${dialogId}">${message}</div>`
 }
 
-
-export function dialogSetButtonDefaults(defaults, options, btnDefaults) {
+export function setButtonDefaults (defaults, options, btnDefaults) {
   for (let btn in btnDefaults) {
 
     let btnEnabledByDefault = btn in defaults && (defaults[btn] || isObject(defaults[btn]))
@@ -41,17 +37,19 @@ export function dialogSetButtonDefaults(defaults, options, btnDefaults) {
     if (btn in options && options[btn] === true) {
       options[btn] = btnDefaults[btn];
     }
-    // set options buttons names to __ok__, __cancel__
-    // these cannot be overwritten by the options settings to preserve a standard
-    // in case people are relying on __ok__, __cancel__ in their template definitions,
-    // to get the functionality of those buttons
+    /**
+     * set options buttons names to __ok__, __cancel__
+     * these cannot be overwritten by the options settings to preserve a standard
+     * in case people are relying on __ok__, __cancel__ in their template definitions,
+     * to get the functionality of those buttons
+     */
     if (btn in options && isObject(options[btn]) && 'name' in options[btn]) {
       options[btn].name = btnDefaults[btn].name
     }
   }
 }
 
-export function dialogRedirect(router, route) {
+export function redirectFn (router, route) {
 
   const parentIndex = route.matched.length - 2
   const parent = parentIndex in route.matched ? route.matched[parentIndex] : null
@@ -71,30 +69,11 @@ export function dialogRedirect(router, route) {
   }
 }
 
-export function dialogEmit(emit, emitName, e, ...args) {
-  return emit((emitName !== '' ? emitName + ':' : '') + e, ...args)
+export function payloadFn(element, ...args){
+  return extractData(element, ...args)
 }
 
-export function dialogRouter(router, redirectFunction) {
-
-  let emitName = '';
-
-  if (typeof router === 'object') {
-    for (let i in router) {
-      emitName = i;
-      if (isFunction(router[i])) {
-        redirectFunction = router[i]
-      }
-      break;
-    }
-  } else if (typeof router === 'string') {
-    emitName = router
-  }
-  return { emitName, redirectFunction }
-}
-
-
-export function getAndroidNavbarHeight(dialogId) {
+export function getAndroidNavbarHeight (dialogId) {
 
   let controlHeight = document.createElement('div')
 
@@ -129,7 +108,7 @@ export function getAndroidNavbarHeight(dialogId) {
  * @param dialogId
  * @param dialogOptions
  */
-export function dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow(dialogId, dialogOptions) {
+export function dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow (dialogId, dialogOptions) {
 
   let dialogContent = document.getElementById(dialogId);
 
@@ -147,7 +126,7 @@ export function dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflo
 
     if (isRightContext) {
 
-      log('**fix_android', 'context correct: mobile android platform')
+      log('**fix_android', 'context correct: mobile android platform ')
 
       let androidNavbarHeight = getAndroidNavbarHeight(dialogId);
 
@@ -156,7 +135,7 @@ export function dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflo
         let originalMaxHeight = '100vh'
 
         // inner dialog element sensor
-        new ResizeSensor(element, function () {
+        new ResizeSensor(element, function() {
           // if internal element is greater than the parent
           if (element.clientHeight > elementParent.clientHeight) {
             // set a limit to the size of the parent element
@@ -174,7 +153,7 @@ export function dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflo
         });
 
         // parent element sensor
-        new ResizeSensor(elementParent, function () {
+        new ResizeSensor(elementParent, function() {
           // only change this if we are already changed the element before
           // then element.style.maxHeight won't equal to originalMaxHeight
           if (element.style.maxHeight !== originalMaxHeight
@@ -199,17 +178,42 @@ export function dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflo
 }
 
 
-export async function dialogHideAsync(xDialog, maxSleep = 1500, interval = 16.7) {
+export function xDialog (app) {
 
-  log('**dialogHideAsync', 'maxSleep:', maxSleep)
-  // prevent rerouting on dismiss that fires when it determines
-  // if it's moving back in history or has to move forward with push
-  // @see function dialogRedirect
-  xDialog.hide('preventDismissRedirect')
+  return (props, listeners) => {
 
-  // delay execution if hiding is still in progress
-  let i = 0
-  while (xDialog.hide('isHiding') && i * interval < maxSleep) {
-    await sleep(interval) && i++
+    const container = document.createElement('div')
+
+    document.body.appendChild(container)
+
+    let modelEvents = {}
+    const models = ['modelValue', 'options', 'import', 'props']
+
+    /* Retain reactivity */
+    for (let model of models) {
+      modelEvents[`onUpdate:${model}`] = function(modelValue) {
+        if (model in props && isRef(props[model])) {
+          props[model].value = modelValue
+        }
+      }
+    }
+
+    if ('show' in props) props.modelValue = props.show
+
+    // await import : (await import('./XDialog.vue')).default
+    let component = createComponent({
+      el: container,
+      component: h(XDialog, { ...modelEvents, ...listeners }),
+      props: props,
+      appContext: app._context,
+    }).onOk((payload) => {
+      console.log('payload', payload)
+    }).onCancel((payload) => {
+      console.log('payload', payload)
+    })
+
+    console.log('component', component)
+    return component
   }
 }
+

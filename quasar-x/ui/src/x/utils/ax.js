@@ -10,7 +10,7 @@ import { Notify } from 'quasar'
 let token;
 
 export function getCookie(name) {
-  let match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? match[2] : null;
 }
 
@@ -49,7 +49,7 @@ export function notify(type, msg) {
 function getToken() {
 
   // get the XSRF-TOKEN from laravel
-  let token = getCookie('XSRF-TOKEN');
+  const token = getCookie('XSRF-TOKEN');
 
   // request it only if not already requested.
   if (token != null) {
@@ -126,7 +126,7 @@ export function post(url, ...args) {
 }
 
 export async function initialState(to, next) {
-  let r = await get(to.fullPath);
+  const r = await get(to.fullPath);
   to.meta.data = r.data
   next()
 }

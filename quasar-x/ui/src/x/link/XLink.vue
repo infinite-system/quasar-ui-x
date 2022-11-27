@@ -1,11 +1,11 @@
 <script>export default { name: 'XLink' }</script>
 <script setup>
-import { computed, useAttrs } from 'vue'
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 
 const props = defineProps({
   ...RouterLink.props,
-  class : String
+  class: String
 })
 
 const isExternal = computed(() => {

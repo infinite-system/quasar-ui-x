@@ -23,7 +23,7 @@ export function customAsyncComponent(component) {
 }
 
 
-export default function smartImport(fn = srcImport) {
+export default function resolveImport(fn = dynamicImport) {
   /**
    * Return callback function.
    * This is necessary to make dynamic imports work properly,
@@ -34,12 +34,12 @@ export default function smartImport(fn = srcImport) {
     let c = component;
 
     switch (typeof component) {
-      case 'function': // it's an async () => import('...')
+      case 'function': // handle: () => import('...')
         c = customAsyncComponent(component)
         break;
       case 'object':
         c = isPromise(component)
-          ? customAsyncComponent(() => component) // it's an import('../ComponentName...')
+          ? customAsyncComponent(() => component) // handle import('../ComponentName...')
           : component // direct import by component itself
         break;
       case 'string':
@@ -52,14 +52,28 @@ export default function smartImport(fn = srcImport) {
   }
 }
 
-export function srcImport(component) {
+export function setupImport() {
+  return resolveImport(dynamicImport)
+}
+
+export function dynamicImport(component) {
   return () => import(`src/${component}.vue`)
 }
 
-export function setupImport(fn = srcImport) {
-  return smartImport(fn)
+export async function asyncImporter(component){
+  return import(`src/${component}.vue`)
 }
 
-export function xImport(component, fn = srcImport) {
-  return smartImport(fn)(component)
+export async function asyncImport(component) {
+  let i, e
+  try {
+    i = markRaw((await asyncImporter(component)).default)
+  } catch (err) {
+    e = 'asyncImport failed: ' + err
+  }
+  return new Promise((resolve, reject) => e ? reject(e) : resolve(i));
+}
+
+export function smartImport(component, fn = dynamicImport) {
+  return resolveImport(fn)(component)
 }
