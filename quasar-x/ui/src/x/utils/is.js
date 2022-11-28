@@ -18,6 +18,10 @@ export function isPromise(p) {
     typeof p.catch === 'function';
 }
 
+export function isAsync(f) {
+  return isFunction(f) && f.constructor.name === "AsyncFunction"
+}
+
 export function isString(s){
   return typeof s === 'string'
 }

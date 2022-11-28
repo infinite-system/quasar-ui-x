@@ -1,23 +1,21 @@
 <script lang="ts">export default { name: 'XDialog', inheritAttrs: false }</script>
 <script setup lang="ts">
-import { ref, watch, computed, toRefs, defineProps, onBeforeUnmount, useSlots, isRef } from 'vue';
+import { ref, watch, computed, toRefs, defineProps, onBeforeUnmount, useSlots, isRef, h, markRaw, shallowRef } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { QBtn, useQuasar } from 'quasar'
-import { keepAlive, warn, mergeDeep, log, byId, onFrame, isFunction, isObject, sleep, smartImport } from '../utils.js'
+import { log, warn, mergeDeep, byId, onFrame, isFunction, isObject, sleep } from '../utils.js'
 import {
   dialogId, remove, wrap, optionsFromString, setButtonDefaults,
   dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow
 } from './XDialogHelpers.js';
 
 import { propsXDialog } from "../types/x"
-import { asyncImport } from "../utils/import.js";
+import { asyncImport, setupAsyncImport } from "../utils/import.js";
 
 const p = defineProps(propsXDialog)
 
 const emit = defineEmits([
-  // built in two way binding v-models:
   'update:modelValue', 'update:options', 'update:import', 'update:props',
-  // emitable events that a parent can catch:
   'show', 'hide', 'ok', 'cancel', 'go'
 ])
 
@@ -42,11 +40,8 @@ function namedEmit (event, ...args) {
 }
 
 const importComponent = ref(null)
-const computedComponent = ref(null)
+const resolvedImport = shallowRef(null)
 
-// vue router-view refresh helpers
-const isAlive = ref(true)
-const live = () => keepAlive(isAlive)
 
 const id = p.id || 'XDialog_' + dialogId()
 
@@ -81,9 +76,9 @@ function prepareOptions (defaults, options, initialLoad = true) {
   // then it goes back to the component definition and displays
   // the component
   if (!('message' in options)
-    || options?.message === undefined
-    || options?.message === null
-    || options?.message === '') {
+      || options?.message === undefined
+      || options?.message === null
+      || options?.message === '') {
     dialogOptions.message = wrap(id, '')
   } else {
     dialogOptions.message = options.message + wrap(id, '')
@@ -137,7 +132,7 @@ const XDialog = {
 
   async hideAsync ({ command, maxDuration = 1500, interval = 16.7 } = {}) {
 
-    log('hideAsync', 'maxDuration:', maxDuration, 'interval:', interval, 'xState().isHiding():',  XDialog.xState().isHiding())
+    log('hideAsync', 'maxDuration:', maxDuration, 'interval:', interval, 'xState().isHiding():', XDialog.xState().isHiding())
 
     // Important: XDialog.hide() function call below MUST be inside this async function not outside of it
     XDialog.hide(command)
@@ -205,7 +200,7 @@ const XDialog = {
 
       },
       isLoading () {
-
+        return !!loading.value
       }
     }
   },
@@ -249,7 +244,7 @@ function setProps (props, { update = false } = {}) {
     emit('update:props', update ? mergeDeep({}, p.props, props) : props)
   } else {
     localComponentProps.value = update
-      ? mergeDeep(localComponentProps.value, props) : props
+        ? mergeDeep(localComponentProps.value, props) : props
   }
   log('setProps', props)
   return XDialog
@@ -458,8 +453,8 @@ function okCancel (type, event = null) {
   for (let callback of callbacks[type]) {
 
     const payloadFn = isFunction(callback.payloadFn)
-      ? callback.payloadFn
-      : p.payloadFn
+        ? callback.payloadFn
+        : p.payloadFn
 
     payload = getPayload(XDialog.xDom().xInner(), payloadFn)
 
@@ -507,9 +502,9 @@ watch(localShow, () => localShow.value ? mount() : hide(), { immediate: true })
 watch(modelValue, () => localShow.value = modelValue.value, { immediate: true })
 
 watch(options, () => isOpen()
-    ? setOptions(options.value)
-    : dialogOptions = prepareOptions(dialogOptions, options.value, false),
-  { deep: true }
+        ? setOptions(options.value)
+        : dialogOptions = prepareOptions(dialogOptions, options.value, false),
+    { deep: true }
 );
 
 watch(component, () => localComponent.value = component.value, { immediate: true })
@@ -524,20 +519,56 @@ watch([localComponent, localShow], (newA, prevA) => {
   }
 }, { immediate: true });
 
+const loading = shallowRef(null)
+const loadingProps = shallowRef({})
+const loadingError = ref(false)
+
+const loader = {
+  timer: null,
+  show (component) {
+    loadingProps.value = { dialog: XDialog, component: component, pretty: p.importConfig.pretty }
+    this.timer = setTimeout(() => {
+      loading.value = p.importConfig.loading
+    }, p.importConfig.delay)
+  },
+  hide () {
+    clearTimeout(this.timer)
+    loading.value = null
+  },
+  error (e) {
+    clearTimeout(this.timer)
+    loading.value = p.importConfig.error
+    loadingProps.value.error = e
+    loadingError.value = true
+  }
+}
+
+const importFn = setupAsyncImport(p.importConfig.fn, p.importConfig.timeout)
+
 watch(importComponent, async () => {
+
   if (importComponent.value) {
-    const isString =
 
-    computedComponent.value = isString(importComponent.value)
-      ? await asyncImport(importComponent.value)
-      : smartImport(importComponent.value)
+    try {
 
-    onFrame(() => onImport(), 100)
+      log('import', 'component', importComponent.value, 'config', p.importConfig)
+
+      loader.show(importComponent.value)
+
+      resolvedImport.value = await importFn(importComponent.value)
+
+      loader.hide()
+
+      onFrame(() => onImport(), 50)
+
+    } catch (e) {
+      loader.error(e)
+    }
   }
 }, { immediate: true })
 
 function onImport () {
-  log('imports', 'Imported new component:' + localComponent.value)
+  // alert('imports', 'Imported new component:' + localComponent.value)
 }
 
 watch(componentProps, () => localComponentProps.value = componentProps.value, { deep: true });
@@ -552,11 +583,12 @@ defineExpose(XDialog)
     <slot :dialog="XDialog"/>
   </component>
   <Teleport v-if="isMounted && (validComponent || hasTemplate)" :to="'#'+id">
-    <component v-if="validComponent"
-               :is="computedComponent"
+    <component v-if="validComponent && !loadingError"
+               :is="resolvedImport"
                v-bind="localComponentProps"
                :dialog="XDialog"
-               @live="live"/>
+    />
+    <component v-if="loading" :is="loading" v-bind="loadingProps"/>
     <slot :dialog="XDialog" v-if="!validComponent" name="template"/>
   </Teleport>
 </template>

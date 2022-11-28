@@ -40,7 +40,7 @@ const rollupPlugins = [
     extensions: ['.js'],
     preferBuiltins: false
   }),
-  commonjs(),
+  commonjs({extensions:['.js']}),
   typescript({
     transpileOnly : true
     // module: 'es2020',

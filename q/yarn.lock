@@ -2766,9 +2766,9 @@ quasar-ui-qgrid@latest:
     sortablejs "^1.10.2"
 
 quasar-ui-x@^0.4.10:
-  version "0.4.23"
-  resolved "https://registry.yarnpkg.com/quasar-ui-x/-/quasar-ui-x-0.4.23.tgz#5300260086c0ac1152068f59800be647baab3a2e"
-  integrity sha512-tvP1uJIPzGc0DEtAw2WOnDafbsLGBtSH8P38Q+aZWcu6gyfE6oOrb1ntSheZ6lZCewpw9bG2RVBbnplWonj1Zg==
+  version "0.4.25"
+  resolved "https://registry.yarnpkg.com/quasar-ui-x/-/quasar-ui-x-0.4.25.tgz#9443ef45311ca32a8a8f69204f47f6bcbefb2783"
+  integrity sha512-ajlMdtPB9GSQ5DgvlCWV34+9MLkKWa7Mly/dtL062YGDjXnWIsnoajCBYUdKP9mqUPPwVImtWM4yb7CiDqakRw==
   dependencies:
     css-element-queries "^1.2.3"
 

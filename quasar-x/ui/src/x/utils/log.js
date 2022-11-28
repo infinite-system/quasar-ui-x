@@ -6,6 +6,10 @@ export function warn(...args) {
   return console.warn(...args)
 }
 
+export function err(...args) {
+  return console.error(...args)
+}
+
 export function info(...args) {
   return console.warn(...args)
 }

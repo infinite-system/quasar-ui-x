@@ -14,7 +14,7 @@ const dynamicImport = require('vite-plugin-dynamic-import').default
 
 module.exports = configure(function (/* ctx */) {
   return {
-    supportTS: true,
+    // supportTS: true,
     eslint: {
       // fix: true,
       // include = [],

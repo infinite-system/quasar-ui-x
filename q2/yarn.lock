@@ -2496,17 +2496,17 @@ qs@6.11.0:
   dependencies:
     side-channel "^1.0.4"
 
-quasar-app-extension-x@^0.4.12:
-  version "0.4.12"
-  resolved "https://registry.yarnpkg.com/quasar-app-extension-x/-/quasar-app-extension-x-0.4.12.tgz#e47612e12b18ba15500747a57e418ca23f254e25"
-  integrity sha512-B3pJAsGF37HhRZd/ozh38mgYZCRMutrsEPpYrEp7kfJYysD8ghihB5YhmL63BWKUVllSyjkdOmxVCdGuIRAE1w==
+quasar-app-extension-x@^0.4.42:
+  version "0.4.42"
+  resolved "https://registry.yarnpkg.com/quasar-app-extension-x/-/quasar-app-extension-x-0.4.42.tgz#33ff798165dec1e3a9bb0dfa60d7aa890ec5f005"
+  integrity sha512-dmOm4xb2OBoEsQ9A8VuQKxChmQ3DnP/uNGZ+LplIWxIjw06Xz4AkhiBWindxy5E9nq9fiCEOpsU8Jk9HaQAMwg==
   dependencies:
     quasar-ui-x "^0.4.10"
 
 quasar-ui-x@^0.4.10:
-  version "0.4.23"
-  resolved "https://registry.yarnpkg.com/quasar-ui-x/-/quasar-ui-x-0.4.23.tgz#5300260086c0ac1152068f59800be647baab3a2e"
-  integrity sha512-tvP1uJIPzGc0DEtAw2WOnDafbsLGBtSH8P38Q+aZWcu6gyfE6oOrb1ntSheZ6lZCewpw9bG2RVBbnplWonj1Zg==
+  version "0.4.41"
+  resolved "https://registry.yarnpkg.com/quasar-ui-x/-/quasar-ui-x-0.4.41.tgz#661a435224f4a09d646e21d48a8af936daa6ac17"
+  integrity sha512-WQxiqI5Xm5SMnzXxfebTWoMEhMIOa14Ho7PMNLKzhnmF0MulNiuyT5ImK2OzDAaDECuz9ASUQ516hNGTr4n8aQ==
   dependencies:
     css-element-queries "^1.2.3"
 

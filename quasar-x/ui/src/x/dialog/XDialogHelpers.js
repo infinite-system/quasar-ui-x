@@ -1,6 +1,6 @@
 import ResizeSensor from "css-element-queries/src/ResizeSensor";
 import { isObject, log, isFunction, createComponent, extractData } from '../utils'
-import { h, isRef } from 'vue'
+import { h, isRef, markRaw } from 'vue'
 import XDialog from './XDialog.vue'
 
 let uniqueDialogId = 1
@@ -199,6 +199,10 @@ export function xDialog (app) {
     }
 
     if ('show' in props) props.modelValue = props.show
+
+    if ('import' in props && !isRef(props.import) && isObject(props.import)){
+      props.import = markRaw(props.import)
+    }
 
     // await import : (await import('./XDialog.vue')).default
     let component = createComponent({

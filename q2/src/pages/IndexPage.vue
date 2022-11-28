@@ -11,11 +11,13 @@
     Hello
     <x-link to="hello">Link</x-link>
 <!--    <x-link :to="{name:'test1'}">Test1</x-link>-->
-    <x-dialog ref="dialog" :options="{title:'Testing Component'}" :component="'components/SimpleComponent'">Dialog
+    <x-dialog ref="dialog" :options="{title:'Testing Component'}" :import="'components/LargeComponent'">Dialog
     </x-dialog>
     <br/>
     <br/>
     <q-btn @click="createDialog">Create XDialog</q-btn>
+    <br/>
+    <q-btn @click="createLargeDialog">Create Large XDialog</q-btn>
     <br/>
     <br/>
     <q-btn @click="createDialog2">Create QDialog</q-btn>
@@ -33,17 +35,22 @@ import { useX, XDialog } from 'quasar-ui-x'
 
 const $q = useQuasar()
 const $x = useX()
+// $x.dialog({})
 const dialog = ref<XDialog>(null)
 // const dialog = ref(null)
 onMounted(() => {
   const m = dialog.value
   setTimeout(() => {
-    m.update({title:'Hahaha', message:'aaaa'})
+    // m.update({title:'Hahaha', message:'aaaa'})
   }, 0)
 })
 
 function createDialog () {
-  return $x.dialog({ options: { seamless: true, noRouteDismiss: false }, component: 'components/SimpleComponent' })
+  return $x.dialog({ options: { seamless: true, noEscDismiss: false }, import: 'components/SimpleComponent' })
+}
+
+function createLargeDialog () {
+  return $x.dialog({ options: { seamless: false, noEscDismiss: false }, import: 'components/LargeComponent' })
 }
 
 function createDialog2 () {
