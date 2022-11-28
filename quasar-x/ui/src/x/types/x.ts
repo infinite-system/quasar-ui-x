@@ -34,22 +34,21 @@ export interface XDialogProps {
   modelValue?: boolean
   options?: XDialogOptions | string
   import?: boolean | string | object
-  importConfig?: object
   props?: object
   button?: string | object
   buttonProps?: object
   router?: boolean | string | object
   routerRestart?: boolean
+  onToggle?: XDialogDisplaySetup | XDialogDisplayFn
   onShow?: XDialogDisplaySetup | XDialogDisplayFn
   onHide?: XDialogDisplaySetup | XDialogDisplayFn
+  onImport?: XDialogDisplaySetup | XDialogDisplayFn
+  onProps?: XDialogDisplaySetup | XDialogDisplayFn
   onOk?: XDialogPromptSetup | XDialogPromptFn
   onCancel?: XDialogPromptSetup | XDialogPromptFn
   importConfig?: object
-  importFn?: () => ({}) | object
-  importLoading?: Component
-  importError?: Component
-  payloadFn?: () => ({}) | object
-  redirectFn?: () => ({}) | object
+  payloadConfig?: object
+  dismissConfig?: object
 }
 
 export const propsXDialog: PropsWorkaround<XDialogProps> = {
@@ -65,6 +64,7 @@ export const propsXDialog: PropsWorkaround<XDialogProps> = {
   router: { default: false, type: [Boolean, String, Object] },
   routerRestart: { default: false, type: Boolean },
   // events
+  onToggle: { default: null, type: [Function, Object] },
   onShow: { default: null, type: [Function, Object] },
   onImport: { default: null, type: [Function, Object] },
   onHide: { default: null, type: [Function, Object] },
@@ -140,9 +140,9 @@ export interface XDialogChain {
   options: (opts: XDialogOptions) => XDialogChain
   update: (opts: XDialogOptions) => XDialogChain
   import: (file: string | object) => XDialogChain
-  importFn: (fn: () => object | null) => XDialogChain
   props: (props: object, options: object) => XDialogChain
   // events
+  onToggle: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
   onShow: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
   onHide: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
   onOk: (setup: XDialogPromptSetup | XDialogPromptFn) => XDialogChain

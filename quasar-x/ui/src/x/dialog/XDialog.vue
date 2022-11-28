@@ -92,9 +92,9 @@ function prepareOptions (defaults, options, initialLoad = true) {
   // then it goes back to the component definition and displays
   // the component
   if (!('message' in options)
-    || options?.message === undefined
-    || options?.message === null
-    || options?.message === '') {
+      || options?.message === undefined
+      || options?.message === null
+      || options?.message === '') {
     dialogOptions.message = wrap(id, '')
   } else {
     dialogOptions.message = options.message + wrap(id, '')
@@ -115,6 +115,7 @@ let isLoading = false
 let preventDismissRedirect = false
 
 const callbacks = {
+  toggle: [],
   show: [],
   hide: [],
   options: [],
@@ -126,7 +127,14 @@ const callbacks = {
 
 const XDialog = {
   toggle () {
-    setShow(!localShow.value)
+    const toggleValue = !localShow.value
+    setShow(toggleValue)
+    runDisplayCallbacks('toggle', toggleValue)
+    return this
+  },
+
+  onToggle (setup) {
+    setDisplayCallbacks('toggle', setup)
     return this
   },
 
@@ -309,7 +317,7 @@ function setProps (props, config = { update: false }) {
     emit('update:props', config.update ? mergeDeep({}, p.props, props) : props)
   } else {
     localComponentProps.value = config.update
-      ? mergeDeep(localComponentProps.value, props) : props
+        ? mergeDeep(localComponentProps.value, props) : props
   }
   runDisplayCallbacks('props', config)
   return XDialog
@@ -451,6 +459,7 @@ function mount () {
   // Set the main dismiss event
   QDialog.onDismiss(dismiss)
 
+  if (p.onToggle) setDisplayCallbacks('toggle', p.onToggle)
   if (p.onShow) setDisplayCallbacks('show', p.onShow)
   if (p.onHide) setDisplayCallbacks('hide', p.onHide)
   if (p.onOptions) setDisplayCallbacks('options', p.onOptions)
@@ -535,8 +544,8 @@ function okCancel (type, event = null) {
   for (let callback of callbacks[type]) {
 
     const payloadFn = isFunction(callback.payloadFn)
-      ? callback.payloadFn
-      : (p.payloadConfig.enabled ? p.payloadConfig.fn : () => {})
+        ? callback.payloadFn
+        : (p.payloadConfig.enabled ? p.payloadConfig.fn : () => {})
 
     payload = getPayload(XDialog.xDom().xInner(), payloadFn)
 
@@ -584,9 +593,9 @@ watch(localShow, () => localShow.value ? mount() : hide(), { immediate: true })
 watch(modelValue, () => localShow.value = modelValue.value, { immediate: true })
 
 watch(options, () => isOpen()
-    ? setOptions(options.value)
-    : dialogOptions = prepareOptions(dialogOptions, options.value, false),
-  { deep: true }
+        ? setOptions(options.value)
+        : dialogOptions = prepareOptions(dialogOptions, options.value, false),
+    { deep: true }
 );
 
 watch(component, () => localComponent.value = component.value, { immediate: true })
