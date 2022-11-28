@@ -244,6 +244,11 @@ const XDialog = {
 
   props: setProps,
 
+  onProps (setup) {
+    setDisplayCallbacks('props', setup)
+    return this
+  },
+
   xId: () => id,
   xDialog: () => p,
   xOptions: () => options.value,
@@ -547,6 +552,8 @@ function okCancel (type, event = null) {
         ? callback.payloadFn
         : (p.payloadConfig.enabled ? p.payloadConfig.fn : () => {})
 
+    log('payload', 'payloadFn', payloadFn, 'p.payloadConfig', p.payloadConfig)
+
     payload = getPayload(XDialog.xDom().xInner(), payloadFn)
 
     // handle return false to stop the event from going further
@@ -560,7 +567,9 @@ function okCancel (type, event = null) {
   }
 
   if (callbacks[type].length === 0) {
-    payload = getPayload(XDialog.xDom().xInner(), p.payloadFn)
+
+    log('payload', 'p.payloadConfig', p.payloadConfig)
+    payload = getPayload(XDialog.xDom().xInner(), p.payloadConfig.enabled ? p.payloadConfig.fn : () => {})
   }
   // emit events up to parent
   namedEmit(type, payload, stopped)
