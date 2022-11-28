@@ -21,6 +21,19 @@ const emit = defineEmits([
 
 const { modelValue, options, import: component, props: componentProps, router } = toRefs(p)
 
+// onBeforeUnmount MUST always be before the watch functions
+onBeforeUnmount(async () => {
+  if (isOpen()) {
+    /**
+     * prevent rerouting on dismiss that fires when it determines
+     * if it's moving back in history or has to move forward with push
+     * @see function dialogRedirect
+     */
+    await XDialog.hideAsync({ command: 'preventDismissRedirect' })
+    remove(id)
+  }
+})
+
 const vueRouter = useRouter()
 const vueRoute = useRoute()
 
@@ -45,8 +58,10 @@ const resolvedImport = shallowRef(null)
 
 const id = p.id || 'XDialog_' + dialogId()
 
+const defaultClass = computed(() => component.value ? 'x-dialog x-dialog-import' : 'x-dialog')
+const defaultInnerClass = computed(() => component.value ? 'x-dialog__inner x-dialog__inner-import' : 'x-dialog__inner')
+
 const defaults = {
-  class: component.value ? 'nopadding' : '',
   message: wrap(id),
   html: true,
   ok: true
@@ -54,6 +69,7 @@ const defaults = {
 
 const hasButton = computed(() => !!slots.default)
 const hasTemplate = computed(() => !!slots.template)
+
 
 function prepareOptions (defaults, options, initialLoad = true) {
 
@@ -76,14 +92,15 @@ function prepareOptions (defaults, options, initialLoad = true) {
   // then it goes back to the component definition and displays
   // the component
   if (!('message' in options)
-      || options?.message === undefined
-      || options?.message === null
-      || options?.message === '') {
+    || options?.message === undefined
+    || options?.message === null
+    || options?.message === '') {
     dialogOptions.message = wrap(id, '')
   } else {
     dialogOptions.message = options.message + wrap(id, '')
   }
 
+  dialogOptions.class = defaultInnerClass.value + ' ' + ('class' in options ? options.class : '')
   dialogOptions.html = true
 
   return dialogOptions
@@ -91,19 +108,18 @@ function prepareOptions (defaults, options, initialLoad = true) {
 
 let QDialog = null
 
-// handle route-link options in string form
-// router can only set string form options, it cannot set objects
-// so we convert those options from string into the object
-const opts = optionsFromString(options.value) || options.value
-
-let dialogOptions = prepareOptions(defaults, opts)
 
 let isHiding = false
+let isOpening = false
+let isLoading = false
 let preventDismissRedirect = false
 
 const callbacks = {
   show: [],
   hide: [],
+  options: [],
+  import: [],
+  props: [],
   ok: [],
   cancel: [],
 }
@@ -115,22 +131,35 @@ const XDialog = {
   },
 
   show () {
+    isOpening = true
+    isLoading = true
     setShow(true)
     return this
   },
 
   async showAsync ({ maxDuration = 1500, interval = 16.7 } = {}) {
 
+    log('showAsync', 'maxDuration:', maxDuration, 'interval:', interval, 'xState().isOpening():', XDialog.xState().isOpening())
+    // Important: XDialog.show() function call below MUST be inside this async function not outside of it
+    XDialog.show()
+
+    // delay execution if opening is still in progress
+    let i = 0
+    while (XDialog.xState().isOpening() && i * interval < maxDuration) {
+      i++ && await sleep(interval)
+    }
+
+    log('showAsync', 'awaited:', i * interval)
   },
 
   onShow (setup) {
-    addDisplayCallbacks('show', setup)
+    setDisplayCallbacks('show', setup)
     return this
   },
 
   hide,
 
-  async hideAsync ({ command, maxDuration = 1500, interval = 16.7 } = {}) {
+  async hideAsync ({ command = null, maxDuration = 1500, interval = 16.7 } = {}) {
 
     log('hideAsync', 'maxDuration:', maxDuration, 'interval:', interval, 'xState().isHiding():', XDialog.xState().isHiding())
 
@@ -147,7 +176,7 @@ const XDialog = {
   },
 
   onHide (setup) {
-    addDisplayCallbacks('hide', setup)
+    setDisplayCallbacks('hide', setup)
     return this
   },
 
@@ -173,9 +202,37 @@ const XDialog = {
     return this
   },
 
-  options: (opts) => setOptionsThruRef(opts),
+  options: (opts) => setOptionsThruRef(opts, { update: false }),
+
+  onOptions (setup) {
+    setDisplayCallbacks('options', setup)
+    return this
+  },
+
+  update: (opts) => setOptionsThruRef(opts, { update: true }),
 
   import: setImport,
+
+  async importAsync ({ component = null, maxDuration = 1500, interval = 16.7 } = {}) {
+
+    log('importAsync', 'maxDuration:', maxDuration, 'interval:', interval, 'xState().isLoading():', XDialog.xState().isLoading())
+
+    // Important: XDialog.import() function call below MUST be inside this async function not outside of it
+    XDialog.import(component)
+
+    // delay execution if loading is still in progress
+    let i = 0
+    while (XDialog.xState().isLoading() && i * interval < maxDuration) {
+      i++ && await sleep(interval)
+    }
+
+    log('importAsync', 'awaited:', i * interval)
+  },
+
+  onImport (setup) {
+    setDisplayCallbacks('import', setup)
+    return this
+  },
 
   props: setProps,
 
@@ -193,20 +250,27 @@ const XDialog = {
   xState () {
     return {
       isOpen,
-      isHiding () {
+      isOpening: () => {
+        return isOpening
+      },
+      isHiding: () => {
         return isHiding
       },
-      isOpening () {
-
-      },
-      isLoading () {
-        return !!loading.value
+      isLoading: () => {
+        return isLoading
       }
     }
   },
   xImport: () => localComponent.value,
   xProps: () => localComponentProps.value
 }
+
+// handle route-link options in string form
+// router can only set string form options, it cannot set objects
+// so we convert those options from string into the object
+const opts = optionsFromString(options.value) || options.value
+
+let dialogOptions = prepareOptions(defaults, opts)
 
 function isOpen () {
   return QDialog && byId(id)
@@ -234,51 +298,49 @@ function hide (command = '') {
 }
 
 function setImport (component) {
+  isLoading = true
   emit('update:import', component)
   localComponent.value = component
   return XDialog
 }
 
-function setProps (props, { update = false } = {}) {
+function setProps (props, config = { update: false }) {
   if (isRef(p.props)) {
-    emit('update:props', update ? mergeDeep({}, p.props, props) : props)
+    emit('update:props', config.update ? mergeDeep({}, p.props, props) : props)
   } else {
-    localComponentProps.value = update
-        ? mergeDeep(localComponentProps.value, props) : props
+    localComponentProps.value = config.update
+      ? mergeDeep(localComponentProps.value, props) : props
   }
-  log('setProps', props)
+  runDisplayCallbacks('props', config)
   return XDialog
 }
 
 const isMounted = ref(false)
 
-// onBeforeUnmount MUST always be before the watch functions
-
-onBeforeUnmount(async () => {
-  if (isOpen()) {
-    /**
-     * prevent rerouting on dismiss that fires when it determines
-     * if it's moving back in history or has to move forward with push
-     * @see function dialogRedirect
-     */
-    await XDialog.hideAsync({ command: 'preventDismissRedirect' })
-    remove(id)
-  }
-})
-
 function unmount () {
   isMounted.value = false
 }
 
-function runDisplayCallbacks (type) {
-  callbacks[type].forEach(call => call())
+function runDisplayCallbacks (type, ...args) {
+  callbacks[type].forEach(call => call.fn(...args))
 }
 
 function dismissRedirect () {
-  if (router.value && !preventDismissRedirect) {
-    p.redirectFn(vueRouter, vueRoute)
+  if (router.value && !preventDismissRedirect && p.dismissConfig.enabled) {
+    p.dismissConfig.fn(vueRouter, vueRoute)
   }
   preventDismissRedirect = false
+}
+
+async function setClasses (options) {
+
+  if (XDialog.xState().isOpening()) await XDialog.showAsync()
+
+  if (isOpen()) {
+    let classes = defaultClass.value.split(' ');
+    if ('class' in options) classes = [...classes, ...options.class.split(' ')]
+    classes.forEach(klass => klass ? XDialog.xDom().xWrap().classList.add(klass) : '')
+  }
 }
 
 function dismiss () {
@@ -294,16 +356,23 @@ function dismiss () {
   dismissRedirect()
 
   isHiding = false
+  isLoading = false
+  isOpening = false
 }
 
 // Custom update function for XDialog
 
-function setOptions (options) {
+function setOptions (options, config = { update: false }) {
   // if there are saved options update
+  if (!config.update) {
+    dialogOptions = defaults
+  }
+
   if (dialogOptions) {
     mergeDeep(dialogOptions, prepareOptions(dialogOptions, options, false))
   }
 
+  setClasses(options)
   // save the DOM state of the dialog
   let content = ''
   onFrame(() => { // onFrame is a MUST here
@@ -315,22 +384,29 @@ function setOptions (options) {
 
   // restore the DOM state of the dialog
   // onFrame is a MUST here
-  onFrame(() => byId(id)?.replaceWith(content))
+  onFrame(() => {
+    byId(id)?.replaceWith(content)
+    runDisplayCallbacks('options', config)
+  })
 
   // return the dialog instance itself
   return XDialog
 }
 
-function setOptionsThruRef (opts) {
+function update (options) {
+  return setOptionsThruRef(options, { update: true })
+}
+
+function setOptionsThruRef (opts, config) {
   if (isRef(p.options)) {
     // this is necessary to check if the props are refs
     // then we can forward the update to the v-model:options
     // to keep the two way binding working
-    emit('update:options', mergeDeep({}, p.options, opts))
+    emit('update:options', mergeDeep({}, config.update ? p.options : {}, opts))
   } else {
     // or if the p.options are not reactive
     // we have to directly update the options then
-    return setOptions(opts)
+    return setOptions(opts, config)
   }
 
   return XDialog;
@@ -350,7 +426,7 @@ function addPromptCallbacks (type, setup) {
   callbacks[type].push(options);
 }
 
-function addDisplayCallbacks (type, setup) {
+function setDisplayCallbacks (type, setup) {
 
   let options = { fn: () => {}, reset: false }
 
@@ -361,7 +437,7 @@ function addDisplayCallbacks (type, setup) {
     if (options.reset) callbacks[type] = []
   }
 
-  callbacks[type].push(options.fn);
+  callbacks[type].push(options);
 }
 
 function mount () {
@@ -375,13 +451,18 @@ function mount () {
   // Set the main dismiss event
   QDialog.onDismiss(dismiss)
 
-  if (p.onShow) addDisplayCallbacks('show', p.onShow)
-  if (p.onHide) addDisplayCallbacks('hide', p.onHide)
+  if (p.onShow) setDisplayCallbacks('show', p.onShow)
+  if (p.onHide) setDisplayCallbacks('hide', p.onHide)
+  if (p.onOptions) setDisplayCallbacks('options', p.onOptions)
+  if (p.onImport) setDisplayCallbacks('import', p.onImport)
+  if (p.onProps) setDisplayCallbacks('props', p.onProps)
 
   if (p.onOk) addPromptCallbacks('ok', p.onOk)
   if (p.onCancel) addPromptCallbacks('cancel', p.onCancel)
 
   onFrame(() => { // onFrame is a MUST here
+    isOpening = false
+
     dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow(id, dialogOptions)
     // Teleport will only work when isMounted = true
     isMounted.value = true
@@ -391,6 +472,7 @@ function mount () {
 function fullMount () {
   onFrame(() => { // onFrame is a MUST here
     setShow(true)
+    setClasses(options.value)
     runDisplayCallbacks('show')
     namedEmit('show')
     setOkCancelCallbacks()
@@ -453,8 +535,8 @@ function okCancel (type, event = null) {
   for (let callback of callbacks[type]) {
 
     const payloadFn = isFunction(callback.payloadFn)
-        ? callback.payloadFn
-        : p.payloadFn
+      ? callback.payloadFn
+      : (p.payloadConfig.enabled ? p.payloadConfig.fn : () => {})
 
     payload = getPayload(XDialog.xDom().xInner(), payloadFn)
 
@@ -502,9 +584,9 @@ watch(localShow, () => localShow.value ? mount() : hide(), { immediate: true })
 watch(modelValue, () => localShow.value = modelValue.value, { immediate: true })
 
 watch(options, () => isOpen()
-        ? setOptions(options.value)
-        : dialogOptions = prepareOptions(dialogOptions, options.value, false),
-    { deep: true }
+    ? setOptions(options.value)
+    : dialogOptions = prepareOptions(dialogOptions, options.value, false),
+  { deep: true }
 );
 
 watch(component, () => localComponent.value = component.value, { immediate: true })
@@ -531,11 +613,13 @@ const loader = {
       loading.value = p.importConfig.loading
     }, p.importConfig.delay)
   },
-  hide () {
+  done () {
+    isLoading = false
     clearTimeout(this.timer)
     loading.value = null
   },
   error (e) {
+    isLoading = false
     clearTimeout(this.timer)
     loading.value = p.importConfig.error
     loadingProps.value.error = e
@@ -551,25 +635,21 @@ watch(importComponent, async () => {
 
     try {
 
-      log('import', 'component', importComponent.value, 'config', p.importConfig)
+      console.log('import', 'component', importComponent.value, 'config', p.importConfig)
 
       loader.show(importComponent.value)
 
       resolvedImport.value = await importFn(importComponent.value)
 
-      loader.hide()
+      loader.done()
 
-      onFrame(() => onImport(), 50)
+      onFrame(() => runDisplayCallbacks('import'), 50)
 
     } catch (e) {
       loader.error(e)
     }
   }
 }, { immediate: true })
-
-function onImport () {
-  // alert('imports', 'Imported new component:' + localComponent.value)
-}
 
 watch(componentProps, () => localComponentProps.value = componentProps.value, { deep: true });
 
@@ -592,3 +672,6 @@ defineExpose(XDialog)
     <slot :dialog="XDialog" v-if="!validComponent" name="template"/>
   </Teleport>
 </template>
+<style lang="sass">
+@import './XDialog.sass'
+</style>

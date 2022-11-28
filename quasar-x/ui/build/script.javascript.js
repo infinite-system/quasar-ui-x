@@ -1,4 +1,5 @@
 const vue = require('rollup-plugin-vue')
+const css = require('rollup-plugin-css-only')
 const path = require('path')
 const readline = require('readline')
 const fs = require('fs')
@@ -7,12 +8,7 @@ const rollup = require('rollup')
 const uglify = require('uglify-js')
 const babel = require('@rollup/plugin-babel')
 const buble = require('@rollup/plugin-buble')
-// const dynamicImportVariables = require('rollup-plugin-dynamic-import-variables')
-// const typescript = require('rollup-plugin-typescript2')
-// const typescript = require('@rollup/plugin-typescript')
-// const typescript = require('rollup-plugin-ts-vue')
 const typescript = require('rollup-plugin-ts')
-// const nodent = require('rollup-plugin-nodent')
 const commonjs = require('@rollup/plugin-commonjs')
 const json = require('@rollup/plugin-json')
 const { nodeResolve } = require('@rollup/plugin-node-resolve')
@@ -48,7 +44,11 @@ const rollupPlugins = [
     // objectHashIgnoreUnknownHack: true,
     // check:false,
   }),
-  vue({ css: true, compileTemplate: true }),
+  // inspiration for css & vue compilation
+  // https://forum.vuejs.org/t/how-do-i-extract-scss-using-latest-rollup-plugin-vue/42032/2
+  // https://gist.github.com/plinionaves/b3257f9989eef3b65125d4072e3a884d
+  css(),
+  vue({ preprocessStyles: true }),
   json(),
   babel({
     babelHelpers: 'bundled',

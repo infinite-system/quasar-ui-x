@@ -2504,9 +2504,9 @@ quasar-app-extension-x@^0.4.42:
     quasar-ui-x "^0.4.10"
 
 quasar-ui-x@^0.4.10:
-  version "0.4.41"
-  resolved "https://registry.yarnpkg.com/quasar-ui-x/-/quasar-ui-x-0.4.41.tgz#661a435224f4a09d646e21d48a8af936daa6ac17"
-  integrity sha512-WQxiqI5Xm5SMnzXxfebTWoMEhMIOa14Ho7PMNLKzhnmF0MulNiuyT5ImK2OzDAaDECuz9ASUQ516hNGTr4n8aQ==
+  version "0.4.45"
+  resolved "https://registry.yarnpkg.com/quasar-ui-x/-/quasar-ui-x-0.4.45.tgz#f891cdc3623f5cb5967fa71f6894537fff57d6b1"
+  integrity sha512-vzM11jpvdxWEBHzORibrVjjck5YAGLMorefS35u9Dprwo+fQ3c9Lm6ZCr7gOCVs2SiJSGwXqnhfB437aCNmHKw==
   dependencies:
     css-element-queries "^1.2.3"
 

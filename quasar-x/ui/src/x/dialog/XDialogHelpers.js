@@ -183,7 +183,6 @@ export function xDialog (app) {
   return (props, listeners) => {
 
     const container = document.createElement('div')
-
     document.body.appendChild(container)
 
     let modelEvents = {}
@@ -204,20 +203,12 @@ export function xDialog (app) {
       props.import = markRaw(props.import)
     }
 
-    // await import : (await import('./XDialog.vue')).default
-    let component = createComponent({
+    return createComponent({
       el: container,
       component: h(XDialog, { ...modelEvents, ...listeners }),
       props: props,
       appContext: app._context,
-    }).onOk((payload) => {
-      console.log('payload', payload)
-    }).onCancel((payload) => {
-      console.log('payload', payload)
     })
-
-    console.log('component', component)
-    return component
   }
 }
 

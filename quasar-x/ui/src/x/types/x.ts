@@ -66,18 +66,13 @@ export const propsXDialog: PropsWorkaround<XDialogProps> = {
   routerRestart: { default: false, type: Boolean },
   // events
   onShow: { default: null, type: [Function, Object] },
+  onImport: { default: null, type: [Function, Object] },
   onHide: { default: null, type: [Function, Object] },
   onOk: { default: null, type: [Function, Object] },
   onCancel: { default: null, type: [Function, Object] },
   onOptions: { default: null, type: [Function, Object] },
   onProps: { default: null, type: [Function, Object] },
 
-  importFn: { default: setupImport, type: [Function, Object] },
-  importLoading: { default: XDialogLoading, type: [Object] },
-  importError: { default: XDialogError, type: [Object] },
-
-  payloadFn: { default: () => payloadFn, type: [Function, Object] },
-  redirectFn: { default: () => redirectFn, type: [Function, Object] },
   // extra configs
   importConfig: {
     default: () => ({
@@ -92,13 +87,13 @@ export const propsXDialog: PropsWorkaround<XDialogProps> = {
   payloadConfig: {
     default: () => ({
       enabled: true,
-      handler: payloadFn
+      fn: payloadFn
     }), type: [Object]
   },
   dismissConfig: {
     default: () => ({
       enabled: true,
-      handler: redirectFn
+      fn: redirectFn
     }), type: [Object]
   },
 }
