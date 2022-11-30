@@ -33,20 +33,23 @@ export interface XDialogProps {
   id?: string
   modelValue?: boolean
   options?: XDialogOptions | string
-  import?: boolean | string | object
+  load?: boolean | string | object
   props?: object
   button?: string | object
   buttonProps?: object
   router?: boolean | string | object
   routerRestart?: boolean
+  plugins?: [XDialogPlugins]
+  onCreate?: XDialogDisplaySetup | XDialogDisplayFn
   onToggle?: XDialogDisplaySetup | XDialogDisplayFn
   onShow?: XDialogDisplaySetup | XDialogDisplayFn
   onHide?: XDialogDisplaySetup | XDialogDisplayFn
-  onImport?: XDialogDisplaySetup | XDialogDisplayFn
+  onLoad?: XDialogDisplaySetup | XDialogDisplayFn
+  onMount?: XDialogDisplaySetup | XDialogDisplayFn
   onProps?: XDialogDisplaySetup | XDialogDisplayFn
   onOk?: XDialogPromptSetup | XDialogPromptFn
   onCancel?: XDialogPromptSetup | XDialogPromptFn
-  importConfig?: object
+  loadConfig?: object
   payloadConfig?: object
   dismissConfig?: object
 }
@@ -56,43 +59,46 @@ export const propsXDialog: PropsWorkaround<XDialogProps> = {
   id: { default: '', type: String },
   modelValue: { default: true, type: Boolean },
   options: { default: () => ({}), type: [Object, String] },
-  import: { default: undefined, type: [Boolean, String, Object, Function] },
+  load: { default: undefined, type: [Boolean, String, Object, Function] },
   props: { default: () => ({}), type: Object },
 
   button: { default: QBtn, type: [String, Object] },
   buttonProps: { default: () => ({}), type: Object },
   router: { default: false, type: [Boolean, String, Object] },
   routerRestart: { default: false, type: Boolean },
+  plugins: { default: [], type: Object },
   // events
+  onCreate: { default: null, type: [Function, Object] },
   onToggle: { default: null, type: [Function, Object] },
   onShow: { default: null, type: [Function, Object] },
-  onImport: { default: null, type: [Function, Object] },
+  onLoad: { default: null, type: [Function, Object] },
+  onMount: { default: null, type: [Function, Object] },
   onHide: { default: null, type: [Function, Object] },
   onOk: { default: null, type: [Function, Object] },
   onCancel: { default: null, type: [Function, Object] },
-  onOptions: { default: null, type: [Function, Object] },
+  onUpdate: { default: null, type: [Function, Object] },
   onProps: { default: null, type: [Function, Object] },
 
   // extra configs
-  importConfig: {
+  loadConfig: {
     default: () => ({
       fn: dynamicImporter,
       loading: XDialogLoading,
       error: XDialogError,
       delay: 150,
       timeout: 0,
-      pretty: true
+      pretty: false
     }), type: [Object]
   },
   payloadConfig: {
     default: () => ({
-      enabled: true,
+      on: true,
       fn: payloadFn
     }), type: [Object]
   },
   dismissConfig: {
     default: () => ({
-      enabled: true,
+      on: true,
       fn: redirectFn
     }), type: [Object]
   },
@@ -113,13 +119,14 @@ export interface XDialogDisplaySetup {
   reset?: boolean
 }
 
-type XDialogPromptFn = (payload: any, stopped: boolean) => void | boolean
+type XDialogPromptFn = (payload: any) => void | boolean
 
 export interface XDialogPromptSetup {
   fn?: XDialogPromptFn
   reset?: boolean
   payloadFn?: (element: Element) => any
 }
+
 
 export interface XDialog extends XDialogChain {
   xDialog: () => XDialogProps
@@ -137,19 +144,24 @@ export interface XDialogChain {
   hide: (command?: string | null) => XDialogChain
   ok: XDialogPromptSetup | XDialogPromptFn
   cancel: XDialogPromptSetup | XDialogPromptFn
-  options: (opts: XDialogOptions) => XDialogChain
   update: (opts: XDialogOptions) => XDialogChain
-  import: (file: string | object) => XDialogChain
+  load: (file: string | object) => XDialogChain
   props: (props: object, options: object) => XDialogChain
+  plugins: (plugins: [XDialogPlugins]) => XDialogChain
   // events
+  onCreate: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
   onToggle: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
   onShow: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
   onHide: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
   onOk: (setup: XDialogPromptSetup | XDialogPromptFn) => XDialogChain
   onCancel: (setup: XDialogPromptSetup | XDialogPromptFn) => XDialogChain
-  onOptions: () => XDialogChain
-  onImport: () => XDialogChain
+  onUpdate: () => XDialogChain
+  onLoad: () => XDialogChain
   onProps: () => XDialogChain
+}
+
+export interface XDialogPlugins {
+  pluginName: (dialog: XDialog, name: string) => void
 }
 
 export interface XDialogOptions extends QDialogOptions {
@@ -168,5 +180,5 @@ export interface XDialogDOM {
 }
 
 export interface XVueGlobals {
-  dialog: (opts: XDialogProps) => XDialogChain
+  dialog: (opts: XDialogProps) => XDialog
 }

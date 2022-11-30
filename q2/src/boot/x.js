@@ -4,7 +4,7 @@ import X, { XDialogLoading, XDialogError } from 'quasar-ui-x'
 export default boot(({ app }) => {
 
   app.use(X, {
-    importConfig: {
+    loadConfig: {
       fn: (component) => import(`src/${component}.vue`),
       loading: XDialogLoading,
       error: XDialogError,

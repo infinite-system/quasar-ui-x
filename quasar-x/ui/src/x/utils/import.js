@@ -92,7 +92,7 @@ export async function asyncImport (component, asyncFn = dynamicImporter, timeout
 
   } catch (e) {
     error = 'asyncImport() failed: ' + e
-    err(`${error}. Check dialog.importConfig.timeout setting. Current setting is ${timeout} ms.`)
+    err(`${error}. Check dialog.loadConfig.timeout setting. Current setting is ${timeout} ms.`)
   }
 
   return new Promise((resolve, reject) => error

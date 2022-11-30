@@ -3,23 +3,23 @@
 import { ref, watch, computed, toRefs, defineProps, onBeforeUnmount, useSlots, isRef, h, markRaw, shallowRef } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { QBtn, useQuasar } from 'quasar'
-import { log, warn, mergeDeep, byId, onFrame, isFunction, isObject, sleep } from '../utils.js'
+import { log, warn, mergeDeep, byId, onFrame, isFunction, isObject, sleep, isArray } from '../utils.js'
 import {
-  dialogId, remove, wrap, optionsFromString, setButtonDefaults,
-  dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow
+  dialogId, remove, wrap, parseOptions, setButtonDefaults,
+  fix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow
 } from './XDialogHelpers.js';
 
 import { propsXDialog } from "../types/x"
-import { asyncImport, setupAsyncImport } from "../utils/import.js";
+import { setupAsyncImport } from "../utils/import.js";
 
 const p = defineProps(propsXDialog)
 
 const emit = defineEmits([
-  'update:modelValue', 'update:options', 'update:import', 'update:props',
-  'show', 'hide', 'ok', 'cancel', 'go'
+  'update:modelValue', 'update:options', 'update:load', 'update:props',
+  'show', 'hide', 'ok', 'cancel'
 ])
 
-const { modelValue, options, import: component, props: componentProps, router } = toRefs(p)
+const { modelValue, options, load: component, props: componentProps, router } = toRefs(p)
 
 // onBeforeUnmount MUST always be before the watch functions
 onBeforeUnmount(async () => {
@@ -43,7 +43,8 @@ const slots = useSlots()
 
 // define local variables
 const localShow = ref(modelValue.value)
-const localComponent = ref(component.value)
+const localOptions = ref(options.value)
+const localComponent = shallowRef(component.value)
 const localComponentProps = ref(componentProps.value)
 
 const emitName = router.value || ''
@@ -52,14 +53,13 @@ function namedEmit (event, ...args) {
   return emit((emitName !== '' ? emitName + ':' : '') + event, ...args)
 }
 
-const importComponent = ref(null)
+const loadComponent = ref(null)
 const resolvedImport = shallowRef(null)
-
 
 const id = p.id || 'XDialog_' + dialogId()
 
-const defaultClass = computed(() => component.value ? 'x-dialog x-dialog-import' : 'x-dialog')
-const defaultInnerClass = computed(() => component.value ? 'x-dialog__inner x-dialog__inner-import' : 'x-dialog__inner')
+const defaultClass = computed(() => component.value ? 'x-dialog x-dialog-load' : 'x-dialog')
+const defaultInnerClass = computed(() => component.value ? 'x-dialog__inner x-dialog__inner-load' : 'x-dialog__inner')
 
 const defaults = {
   message: wrap(id),
@@ -70,8 +70,7 @@ const defaults = {
 const hasButton = computed(() => !!slots.default)
 const hasTemplate = computed(() => !!slots.template)
 
-
-function prepareOptions (defaults, options, initialLoad = true) {
+function prepareOptions (defaults, options) {
 
   const btnDefaults = {
     ok: { name: '__ok__', flat: true },
@@ -80,21 +79,17 @@ function prepareOptions (defaults, options, initialLoad = true) {
 
   setButtonDefaults(defaults, options, btnDefaults)
 
-  const dialogOptions = {}
+  let dialogOptions = {}
 
-  mergeDeep(dialogOptions, defaults, options)
+  dialogOptions = mergeDeep({}, defaults, options)
 
-  // log('dialog', id, 'dialogOptions ', dialogOptions, defaults, options)
-
-  // smart wrap the div for component display
-  // if we have message option then we display that message
-  // not the component, if we set the message to null or undefined
-  // then it goes back to the component definition and displays
-  // the component
+  /**
+   * smart wrap the div for component display within 'message' option
+   */
   if (!('message' in options)
-      || options?.message === undefined
-      || options?.message === null
-      || options?.message === '') {
+    || options?.message === undefined
+    || options?.message === null
+    || options?.message === '') {
     dialogOptions.message = wrap(id, '')
   } else {
     dialogOptions.message = options.message + wrap(id, '')
@@ -108,18 +103,25 @@ function prepareOptions (defaults, options, initialLoad = true) {
 
 let QDialog = null
 
+const isHiding = ref(false)
+const isOpening = ref(false)
+const isLoading = ref(false)
+const isLoaded = ref(false)
+const isMounted = ref(false)
+const isFailed = ref(false)
 
-let isHiding = false
-let isOpening = false
-let isLoading = false
+const isCreated = ref(false)
+
 let preventDismissRedirect = false
 
 const callbacks = {
+  create: [],
   toggle: [],
   show: [],
   hide: [],
-  options: [],
-  import: [],
+  update: [],
+  load: [],
+  mount: [],
   props: [],
   ok: [],
   cancel: [],
@@ -128,6 +130,7 @@ const callbacks = {
 const XDialog = {
   toggle () {
     const toggleValue = !localShow.value
+
     setShow(toggleValue)
     runDisplayCallbacks('toggle', toggleValue)
     return this
@@ -139,25 +142,21 @@ const XDialog = {
   },
 
   show () {
-    isOpening = true
-    isLoading = true
     setShow(true)
     return this
   },
 
   async showAsync ({ maxDuration = 1500, interval = 16.7 } = {}) {
 
-    log('showAsync', 'maxDuration:', maxDuration, 'interval:', interval, 'xState().isOpening():', XDialog.xState().isOpening())
-    // Important: XDialog.show() function call below MUST be inside this async function not outside of it
-    XDialog.show()
+    this.show()
 
     // delay execution if opening is still in progress
     let i = 0
-    while (XDialog.xState().isOpening() && i * interval < maxDuration) {
+    while (this.xState().isOpening() && i * interval < maxDuration) {
       i++ && await sleep(interval)
     }
 
-    log('showAsync', 'awaited:', i * interval)
+    log('showAsync', 'await', i * interval)
   },
 
   onShow (setup) {
@@ -169,18 +168,15 @@ const XDialog = {
 
   async hideAsync ({ command = null, maxDuration = 1500, interval = 16.7 } = {}) {
 
-    log('hideAsync', 'maxDuration:', maxDuration, 'interval:', interval, 'xState().isHiding():', XDialog.xState().isHiding())
-
-    // Important: XDialog.hide() function call below MUST be inside this async function not outside of it
-    XDialog.hide(command)
+    this.hide(command)
 
     // delay execution if hiding is still in progress
     let i = 0
-    while (XDialog.xState().isHiding() && i * interval < maxDuration) {
+    while (this.xState().isHiding() && i * interval < maxDuration) {
       i++ && await sleep(interval)
     }
 
-    log('hideAsync', 'awaited:', i * interval)
+    log('hideAsync', 'await', i * interval)
   },
 
   onHide (setup) {
@@ -210,35 +206,35 @@ const XDialog = {
     return this
   },
 
-  options: (opts) => setOptionsThruRef(opts, { update: false }),
+  update: updateThruRef,
 
-  onOptions (setup) {
-    setDisplayCallbacks('options', setup)
+  onUpdate (setup) {
+    setDisplayCallbacks('update', setup)
     return this
   },
 
-  update: (opts) => setOptionsThruRef(opts, { update: true }),
+  load,
 
-  import: setImport,
+  async loadAsync ({ component = null, maxDuration = 1500, interval = 16.7 } = {}) {
 
-  async importAsync ({ component = null, maxDuration = 1500, interval = 16.7 } = {}) {
-
-    log('importAsync', 'maxDuration:', maxDuration, 'interval:', interval, 'xState().isLoading():', XDialog.xState().isLoading())
-
-    // Important: XDialog.import() function call below MUST be inside this async function not outside of it
-    XDialog.import(component)
+    this.load(component)
 
     // delay execution if loading is still in progress
     let i = 0
-    while (XDialog.xState().isLoading() && i * interval < maxDuration) {
+    while (this.xState().isLoading() && i * interval < maxDuration) {
       i++ && await sleep(interval)
     }
 
-    log('importAsync', 'awaited:', i * interval)
+    log('loadAsync', 'await', i * interval)
   },
 
-  onImport (setup) {
-    setDisplayCallbacks('import', setup)
+  onLoad (setup) {
+    setDisplayCallbacks('load', setup)
+    return this
+  },
+
+  onMount (setup) {
+    setDisplayCallbacks('mount', setup)
     return this
   },
 
@@ -249,10 +245,28 @@ const XDialog = {
     return this
   },
 
+  plugins (plugins) {
+    setPlugins(plugins)
+    return this
+  },
+
   xId: () => id,
   xDialog: () => p,
-  xOptions: () => options.value,
-  xDom () {
+  xOptions: () => localOptions.value,
+  xLoad: () => resolvedImport.value,
+  xProps: () => localComponentProps.value,
+  xState () {
+    return {
+      isOpen,
+      isOpening: () => isOpening.value,
+      isHiding: () => isHiding.value,
+      isLoading: () => isLoading.value,
+      isLoaded: () => isLoaded.value,
+      isMounted: () => isMounted.value,
+      isFailed: () => isFailed.value
+    }
+  },
+  xDOM () {
     return {
       xWrap: () => byId(id)?.closest('.q-dialog'),
       xInner: () => byId(id)?.closest('.q-dialog__inner'),
@@ -260,39 +274,29 @@ const XDialog = {
       xContent: () => byId(id)?.closest('.q-dialog-plugin'),
     }
   },
-  xState () {
-    return {
-      isOpen,
-      isOpening: () => {
-        return isOpening
-      },
-      isHiding: () => {
-        return isHiding
-      },
-      isLoading: () => {
-        return isLoading
-      }
-    }
+  xClass () {
+    return this.xOptions()?.class ? this.xOptions().class : ''
   },
-  xImport: () => localComponent.value,
-  xProps: () => localComponentProps.value
 }
 
 // handle route-link options in string form
 // router can only set string form options, it cannot set objects
 // so we convert those options from string into the object
-const opts = optionsFromString(options.value) || options.value
+const opts = parseOptions(localOptions.value)
 
 let dialogOptions = prepareOptions(defaults, opts)
 
 function isOpen () {
-  return QDialog && byId(id)
+  return !!(QDialog && byId(id))
 }
 
 function hide (command = '') {
-  // check status of isHiding, do not hide
-  // hide is already in progress
-  if (command === 'isHiding') return isHiding;
+
+  isOpening.value = false
+  isLoading.value = false
+  isLoaded.value = false
+  isMounted.value = false
+  isFailed.value = false
 
   // prevent back button redirect on dismiss
   // this is used by XDialogLink
@@ -301,7 +305,7 @@ function hide (command = '') {
   }
 
   if (isOpen()) {
-    isHiding = true
+    isHiding.value = true
     // fire quasar original hide event
     // this will fire QDialog.onDismiss callback
     QDialog.hide()
@@ -310,28 +314,28 @@ function hide (command = '') {
   return XDialog
 }
 
-function setImport (component) {
-  isLoading = true
-  emit('update:import', component)
+function load (component) {
+  isLoading.value = true
+  emit('update:load', component)
   localComponent.value = component
   return XDialog
 }
 
 function setProps (props, config = { update: false }) {
+
+  localComponentProps.value = config.update ? mergeDeep(localComponentProps.value, props) : props
+
   if (isRef(p.props)) {
-    emit('update:props', config.update ? mergeDeep({}, p.props, props) : props)
-  } else {
-    localComponentProps.value = config.update
-        ? mergeDeep(localComponentProps.value, props) : props
+    emit('update:props', localComponentProps.value)
   }
+
   runDisplayCallbacks('props', config)
+
   return XDialog
 }
 
-const isMounted = ref(false)
-
-function unmount () {
-  isMounted.value = false
+function uncreate () {
+  isCreated.value = false
 }
 
 function runDisplayCallbacks (type, ...args) {
@@ -339,7 +343,7 @@ function runDisplayCallbacks (type, ...args) {
 }
 
 function dismissRedirect () {
-  if (router.value && !preventDismissRedirect && p.dismissConfig.enabled) {
+  if (router.value && !preventDismissRedirect && p.dismissConfig.on) {
     p.dismissConfig.fn(vueRouter, vueRoute)
   }
   preventDismissRedirect = false
@@ -350,9 +354,11 @@ async function setClasses (options) {
   if (XDialog.xState().isOpening()) await XDialog.showAsync()
 
   if (isOpen()) {
+
     let classes = defaultClass.value.split(' ');
     if ('class' in options) classes = [...classes, ...options.class.split(' ')]
-    classes.forEach(klass => klass ? XDialog.xDom().xWrap().classList.add(klass) : '')
+
+    classes.forEach(c => c ? XDialog.xDOM().xWrap().classList.add(c) : '')
   }
 }
 
@@ -360,7 +366,7 @@ function dismiss () {
 
   runDisplayCallbacks('hide')
 
-  unmount()
+  uncreate()
 
   namedEmit('hide')
 
@@ -368,24 +374,17 @@ function dismiss () {
 
   dismissRedirect()
 
-  isHiding = false
-  isLoading = false
-  isOpening = false
+  isHiding.value = false
 }
 
 // Custom update function for XDialog
 
-function setOptions (options, config = { update: false }) {
-  // if there are saved options update
-  if (!config.update) {
-    dialogOptions = defaults
-  }
+function update (options) {
 
-  if (dialogOptions) {
-    mergeDeep(dialogOptions, prepareOptions(dialogOptions, options, false))
-  }
+  dialogOptions = prepareOptions(defaults, options)
 
   setClasses(options)
+
   // save the DOM state of the dialog
   let content = ''
   onFrame(() => { // onFrame is a MUST here
@@ -399,41 +398,69 @@ function setOptions (options, config = { update: false }) {
   // onFrame is a MUST here
   onFrame(() => {
     byId(id)?.replaceWith(content)
-    runDisplayCallbacks('options', config)
+    runDisplayCallbacks('update')
   })
 
   // return the dialog instance itself
   return XDialog
 }
 
-function update (options) {
-  return setOptionsThruRef(options, { update: true })
-}
+function updateThruRef (opts) {
 
-function setOptionsThruRef (opts, config) {
+  mergeDeep(localOptions.value, opts)
+
   if (isRef(p.options)) {
     // this is necessary to check if the props are refs
     // then we can forward the update to the v-model:options
     // to keep the two way binding working
-    emit('update:options', mergeDeep({}, config.update ? p.options : {}, opts))
+    emit('update:options', localOptions.value)
   } else {
     // or if the p.options are not reactive
     // we have to directly update the options then
-    return setOptions(opts, config)
+    return update(localOptions.value)
   }
 
   return XDialog;
 }
 
+function setPlugins (plugins) {
+  for (const name in plugins) {
+    const fn = plugins[name]
+    if (isFunction(fn)) {
+      fn(XDialog, name)
+    } else {
+      warn(`XDialog plugin '${name}' has to be a function`)
+    }
+  }
+}
+
+function resetCallbacks (type, reset) {
+
+  const notBase = ({ plugin }) => plugin !== '__base__'
+  const notUser = ({ plugin }) => plugin !== false
+
+  switch (true) {
+    case reset === 'all':
+      callbacks[type] = callbacks[type].filter(({ plugin }) => notBase(plugin))
+      break;
+    case reset === true:
+      callbacks[type] = callbacks[type].filter(({ plugin }) => notBase(plugin) && notUser(plugin))
+      break;
+    case isArray(reset):
+      callbacks[type] = callbacks[type].filter(setup => !reset.includes(setup.plugin))
+      break;
+  }
+}
+
 function addPromptCallbacks (type, setup) {
 
-  let options = { fn: () => {}, reset: false, payloadFn: null }
+  let options = { fn: () => {}, reset: false, payloadFn: null, plugin: false }
 
   if (isFunction(setup)) {
     options.fn = setup
   } else if (isObject(setup)) {
     Object.assign(options, setup)
-    if (options.reset) callbacks[type] = []
+    if (options.reset) resetCallbacks(type, options.reset)
   }
 
   callbacks[type].push(options);
@@ -441,19 +468,114 @@ function addPromptCallbacks (type, setup) {
 
 function setDisplayCallbacks (type, setup) {
 
-  let options = { fn: () => {}, reset: false }
+  let options = { fn: () => {}, reset: false, plugin: false }
 
   if (isFunction(setup)) {
     options.fn = setup
   } else if (isObject(setup)) {
     Object.assign(options, setup)
-    if (options.reset) callbacks[type] = []
+    if (options.reset) resetCallbacks(type, options.reset)
   }
 
   callbacks[type].push(options);
 }
 
-function mount () {
+function __base__ (dialog, name) {
+
+  function setOkCancelCallbacks () {
+    setButtonEvents('ok')
+    setButtonEvents('cancel')
+  }
+
+  function setButtonEvents (type) {
+
+    const dialogInner = dialog.xDOM().xInner()
+
+    if (!dialogInner) {
+      warn('Could not find XDialog.xDOM().xInner() to setButtonEvents')
+      return
+    }
+    // find ok / cancel buttons
+    const btns = dialogInner.querySelectorAll('button[name="__' + type + '__"]')
+
+    btns.forEach(btn => {
+      const btnEvents = btn.getEventListeners();
+      // remove the default listeners
+      btnEvents.forEach(e => btn.removeEventListener(e.type, e.listener, e.useCapture))
+      // add proper callbacks
+      btn.addEventListener('click', (event) => okCancel(type, event), false)
+    })
+  }
+
+  dialog.onShow({
+    fn: () => {
+      log('dialog.xOptions()', dialog.xOptions())
+      fix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow(dialog.xId(), dialog.xOptions())
+      setOkCancelCallbacks()
+    },
+    plugin: name
+  }).onLoad({
+    fn: () => {
+      setOkCancelCallbacks()
+    },
+    plugin: name
+  })
+}
+
+function getPayload (payloadFn) {
+
+  const payload = payloadFn(XDialog.xDOM().xInner())
+
+  log('payload', payload)
+
+  return payload
+}
+
+function okCancel (type, event = null) {
+
+  let payload = {}
+  let stopped = false
+
+  const defaultPayloadFn = p.payloadConfig.on ? p.payloadConfig.fn : () => {}
+
+  for (const callback of callbacks[type]) {
+
+    const payloadFn = isFunction(callback.payloadFn)
+      ? callback.payloadFn
+      : defaultPayloadFn
+
+    log('payload', 'payloadFn', payloadFn, 'payloadConfig', p.payloadConfig)
+
+    payload = getPayload(payloadFn)
+
+    // handle return false to stop the event from going further
+    if (callback.fn(payload) === false) {
+      // prevent click event from propagating further
+      // this will stop the closing of the dialog
+      stopped = true
+      if (event !== null) event.stopImmediatePropagation()
+      break
+    }
+  }
+
+  // emit events up to parent
+  namedEmit(type, payload, stopped)
+
+  if (!stopped) hide()
+}
+
+function create () {
+
+  isOpening.value = true
+  isLoading.value = true
+
+  isLoaded.value = false
+  isMounted.value = false
+  isFailed.value = false
+  isHiding.value = false
+
+  setShow(true)
+
   // Remove dom that gets left behind
   // when we open and close dialog quickly
   remove(id)
@@ -464,121 +586,50 @@ function mount () {
   // Set the main dismiss event
   QDialog.onDismiss(dismiss)
 
+  // must be before callback definitions
+  setPlugins({ __base__ })
+  setPlugins(p.plugins)
+
+  if (p.onCreate) setDisplayCallbacks('create', p.onCreate)
+
+  runDisplayCallbacks('create', p.onCreate)
+
   if (p.onToggle) setDisplayCallbacks('toggle', p.onToggle)
   if (p.onShow) setDisplayCallbacks('show', p.onShow)
   if (p.onHide) setDisplayCallbacks('hide', p.onHide)
-  if (p.onOptions) setDisplayCallbacks('options', p.onOptions)
-  if (p.onImport) setDisplayCallbacks('import', p.onImport)
+  if (p.onUpdate) setDisplayCallbacks('update', p.onUpdate)
   if (p.onProps) setDisplayCallbacks('props', p.onProps)
+  if (p.onLoad) setDisplayCallbacks('load', p.onLoad)
+  if (p.onMount) setDisplayCallbacks('mount', p.onMount)
 
   if (p.onOk) addPromptCallbacks('ok', p.onOk)
   if (p.onCancel) addPromptCallbacks('cancel', p.onCancel)
 
   onFrame(() => { // onFrame is a MUST here
-    isOpening = false
+    // Teleport will only work when isCreated = true
+    isCreated.value = true
+    isOpening.value = false
 
-    dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow(id, dialogOptions)
-    // Teleport will only work when isMounted = true
-    isMounted.value = true
-  })
-}
+    setClasses(localOptions.value)
 
-function fullMount () {
-  onFrame(() => { // onFrame is a MUST here
-    setShow(true)
-    setClasses(options.value)
     runDisplayCallbacks('show')
+
     namedEmit('show')
-    setOkCancelCallbacks()
-  })
-}
 
-function setShow (value) {
-  localShow.value = value
-  emit('update:modelValue', value)
-}
+    // if there is not component being loaded, loading is complete at this point
+    if (!p.load) {
 
-function setOkCancelCallbacks () {
-  if (dialogOptions?.ok || dialogOptions?.cancel) {
-    setButtonEvents('ok')
-    setButtonEvents('cancel')
-  }
-}
+      isLoading.value = false
+      isLoaded.value = true
 
-function setButtonEvents (type) {
-
-  const dialogInner = XDialog.xDom().xInner()
-
-  if (!dialogInner) {
-    warn('**events', type, 'could not bet set', 'emitName:', emitName)
-    warn('**events', 'dialogInner does not exist')
-    return // do nothing
-  }
-
-  // find ok / cancel buttons
-  const btns = dialogInner?.querySelectorAll('button[name="__' + type + '__"]')
-
-  btns?.forEach(btn => {
-
-    const btnEvents = btn.getEventListeners();
-
-    // remove the listeners
-    btnEvents.forEach(e => btn.removeEventListener(e.type, e.listener, e.useCapture))
-
-    // add proper callbacks
-    btn.addEventListener('click', (event) => okCancel(type, event), false)
-
-    // re-add the listeners
-    // btnEvents.forEach(e => btn.addEventListener(e.type, e.listener, e.args))
-    // right now we do not re-add the original listeners but implement
-    // our own callback logic and hide/dismiss the dialog
-  })
-}
-
-function getPayload (element, payloadFn) {
-  const payload = payloadFn(element)
-  log('payload', payload)
-  return payload
-}
-
-function okCancel (type, event = null) {
-
-  let payload = {}
-  let stopped = false
-
-  for (let callback of callbacks[type]) {
-
-    const payloadFn = isFunction(callback.payloadFn)
-        ? callback.payloadFn
-        : (p.payloadConfig.enabled ? p.payloadConfig.fn : () => {})
-
-    log('payload', 'payloadFn', payloadFn, 'p.payloadConfig', p.payloadConfig)
-
-    payload = getPayload(XDialog.xDom().xInner(), payloadFn)
-
-    // handle return false to stop the event from going further
-    if (callback.fn(payload, stopped) === false) {
-      // prevent click event from propagating further
-      // this will stop the closing of the dialog
-      stopped = true
-      if (event !== null) event.stopImmediatePropagation()
-      break
+      runDisplayCallbacks('load')
     }
-  }
+  })
+}
 
-  if (callbacks[type].length === 0) {
-
-    log('payload', 'p.payloadConfig', p.payloadConfig)
-    payload = getPayload(XDialog.xDom().xInner(), p.payloadConfig.enabled ? p.payloadConfig.fn : () => {})
-  }
-  // emit events up to parent
-  namedEmit(type, payload, stopped)
-
-  if (!stopped) {
-    hide()
-  }
-
-  return { payload, stopped }
+function setShow (show) {
+  localShow.value = show
+  emit('update:modelValue', show)
 }
 
 function notEmptyComponent (c) {
@@ -594,28 +645,29 @@ function componentChanged (newA, prevA) {
   return newA?.toString() !== prevA?.toString()
 }
 
-watch(isMounted, () => isMounted.value ? fullMount() : null);
-
 // Smart watcher for managing 'modelValue' prop
 // from parent and keeping it reactive.
-watch(localShow, () => localShow.value ? mount() : hide(), { immediate: true })
 watch(modelValue, () => localShow.value = modelValue.value, { immediate: true })
+watch(localShow, () => localShow.value ? create() : hide(), { immediate: true })
 
-watch(options, () => isOpen()
-        ? setOptions(options.value)
-        : dialogOptions = prepareOptions(dialogOptions, options.value, false),
-    { deep: true }
+watch(options, () => localOptions.value = options.value, { immediate: true, deep: true })
+
+watch(localOptions, () => {
+    isOpen() || isOpening.value
+      ? update(localOptions.value)
+      : dialogOptions = prepareOptions(defaults, localOptions.value)
+  }, { immediate: true, deep: true }
 );
-
-watch(component, () => localComponent.value = component.value, { immediate: true })
 
 const validComponent = computed(() => notEmptyComponent(localComponent.value))
 
-// Smart imported component watcher
+watch(component, () => localComponent.value = component.value, { immediate: true })
+
+// Smart loaded component watcher
 watch([localComponent, localShow], (newA, prevA) => {
   // change component only if shown & changed to save on memory and rendering
   if (localShow.value && validComponent && componentChanged(newA, prevA)) {
-    importComponent.value = localComponent.value
+    loadComponent.value = localComponent.value
   }
 }, { immediate: true });
 
@@ -624,44 +676,70 @@ const loadingProps = shallowRef({})
 const loadingError = ref(false)
 
 const loader = {
+
   timer: null,
+
   show (component) {
-    loadingProps.value = { dialog: XDialog, component: component, pretty: p.importConfig.pretty }
+
+    isLoading.value = true
+    isMounted.value = false
+    isFailed.value = false
+
+    loadingProps.value = { dialog: XDialog, component: component, pretty: p.loadConfig.pretty }
+
     this.timer = setTimeout(() => {
-      loading.value = p.importConfig.loading
-    }, p.importConfig.delay)
+      loading.value = p.loadConfig.loading
+    }, p.loadConfig.delay)
   },
+
   done () {
-    isLoading = false
     clearTimeout(this.timer)
+
     loading.value = null
+
+    isLoading.value = false
+    onFrame(() => {
+      if (loadFile.value) {
+        isLoaded.value = true
+        isFailed.value = false
+        runDisplayCallbacks('load')
+      }
+    }, 50)
   },
+
   error (e) {
-    isLoading = false
     clearTimeout(this.timer)
-    loading.value = p.importConfig.error
+
+    isLoading.value = false
+    isLoaded.value = true
+    isFailed.value = true
+
+    loading.value = p.loadConfig.error
     loadingProps.value.error = e
+
     loadingError.value = true
   }
 }
 
-const importFn = setupAsyncImport(p.importConfig.fn, p.importConfig.timeout)
+const loadFn = setupAsyncImport(p.loadConfig.fn, p.loadConfig.timeout)
 
-watch(importComponent, async () => {
+const loadFile = ref(null)
+watch(loadComponent, async () => {
 
-  if (importComponent.value) {
+  if (loadComponent.value && !isHiding.value) {
 
     try {
+      log('load', 'component', loadComponent.value, 'config', p.loadConfig)
 
-      console.log('import', 'component', importComponent.value, 'config', p.importConfig)
+      // this reassignment is necessary loadFile.value is used later in
+      // watch(isHiding, ...) to cancel import if dialog is dismissed
+      loadFile.value = loadComponent.value
 
-      loader.show(importComponent.value)
+      loader.show(loadComponent.value)
 
-      resolvedImport.value = await importFn(importComponent.value)
+      resolvedImport.value = await loadFn(loadFile.value)
 
       loader.done()
-
-      onFrame(() => runDisplayCallbacks('import'), 50)
 
     } catch (e) {
       loader.error(e)
@@ -669,7 +747,14 @@ watch(importComponent, async () => {
   }
 }, { immediate: true })
 
+watch(isHiding, () => isHiding.value ? loadFile.value = null : null);
+
 watch(componentProps, () => localComponentProps.value = componentProps.value, { deep: true });
+
+function emitMount (...args) {
+  isMounted.value = true
+  runDisplayCallbacks('mount', ...args)
+}
 
 defineExpose(XDialog)
 </script>
@@ -678,16 +763,17 @@ defineExpose(XDialog)
              :is="button"
              v-bind="buttonProps"
              @click="XDialog.toggle()">
-    <slot :dialog="XDialog"/>
+    <slot :dialog="XDialog" />
   </component>
-  <Teleport v-if="isMounted && (validComponent || hasTemplate)" :to="'#'+id">
-    <component v-if="validComponent && !loadingError"
+  <Teleport v-if="isCreated && (validComponent || hasTemplate)" :to="'#'+id">
+    <component v-if="validComponent && !loadingError && resolvedImport"
                :is="resolvedImport"
                v-bind="localComponentProps"
                :dialog="XDialog"
+               @mount="emitMount"
     />
-    <component v-if="loading" :is="loading" v-bind="loadingProps"/>
-    <slot :dialog="XDialog" v-if="!validComponent" name="template"/>
+    <component v-if="loading" :is="loading" v-bind="loadingProps" />
+    <slot v-if="!validComponent" name="template" :dialog="XDialog" />
   </Teleport>
 </template>
 <style lang="sass">

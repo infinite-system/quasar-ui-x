@@ -22,6 +22,10 @@ export function isAsync(f) {
   return isFunction(f) && f.constructor.name === "AsyncFunction"
 }
 
+export function isArray(a){
+  return typeof a !== 'undefined' && typeof a.constructor !== 'undefined' && a.constructor === Array
+}
+
 export function isString(s){
   return typeof s === 'string'
 }

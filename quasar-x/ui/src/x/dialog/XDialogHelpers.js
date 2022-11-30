@@ -1,5 +1,5 @@
 import ResizeSensor from "css-element-queries/src/ResizeSensor";
-import { isObject, log, isFunction, createComponent, extractData } from '../utils'
+import { isObject, log, isFunction, createComponent, extractData, warn } from '../utils'
 import { h, isRef, markRaw } from 'vue'
 import XDialog from './XDialog.vue'
 
@@ -9,7 +9,7 @@ export function dialogId () {
   return uniqueDialogId++
 }
 
-export function optionsFromString (options) {
+export function parseOptions (options) {
   return typeof options === 'string' ? JSON.parse(options) : options
 }
 
@@ -69,7 +69,7 @@ export function redirectFn (router, route) {
   }
 }
 
-export function payloadFn(element, ...args){
+export function payloadFn (element, ...args) {
   return extractData(element, ...args)
 }
 
@@ -108,7 +108,7 @@ export function getAndroidNavbarHeight (dialogId) {
  * @param dialogId
  * @param dialogOptions
  */
-export function dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow (dialogId, dialogOptions) {
+export function fix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow (dialogId, dialogOptions) {
 
   let dialogContent = document.getElementById(dialogId);
 
@@ -126,7 +126,7 @@ export function dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflo
 
     if (isRightContext) {
 
-      log('**fix_android', 'context correct: mobile android platform ')
+      log('fix_android', 'context correct: mobile android platform ')
 
       let androidNavbarHeight = getAndroidNavbarHeight(dialogId);
 
@@ -174,6 +174,8 @@ export function dialogFix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflo
         });
       }
     }
+  } else {
+    warn(`Could not find dialog content ${dialogId}`)
   }
 }
 
@@ -186,7 +188,7 @@ export function xDialog (app) {
     document.body.appendChild(container)
 
     let modelEvents = {}
-    const models = ['modelValue', 'options', 'import', 'props']
+    const models = ['modelValue', 'options', 'load', 'props']
 
     /* Retain reactivity */
     for (let model of models) {
@@ -199,8 +201,8 @@ export function xDialog (app) {
 
     if ('show' in props) props.modelValue = props.show
 
-    if ('import' in props && !isRef(props.import) && isObject(props.import)){
-      props.import = markRaw(props.import)
+    if ('load' in props && !isRef(props.load) && isObject(props.load)) {
+      props.load = markRaw(props.load)
     }
 
     return createComponent({
