@@ -6,6 +6,7 @@ import { isObject } from './is.js'
  */
 export default function mergeDeep(target, ...sources) {
   if (!sources.length) return target;
+
   const source = sources.shift();
 
   if (isObject(target) && isObject(source)) {

@@ -1,6 +1,6 @@
 import { inject } from 'vue'
-import type { XVueGlobals } from "@/x/types/x";
+import type { XVueGlobals } from "../types/x";
 
-export function useX (): XVueGlobals {
+export function useX (): XVueGlobals | undefined {
   return inject('x')
 }

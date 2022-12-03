@@ -37,6 +37,23 @@ export function logify(o) {
   return JSON.parse(stringify(o))
 }
 
+export function dbg(name, type, ...args){
+
+  let location;
+
+  try {
+    a.debug();
+  } catch (e) {
+    if (typeof e?.stack === 'string'){
+      location = e.stack.split("\n")[3].trim()
+    }
+  }
+
+  console.groupCollapsed(`%c${name} %c${type}`, 'color:#187bcc', 'color: green', ...args, location);
+  console.trace()
+  console.groupEnd();
+}
+
 export default {
   log,
   info,

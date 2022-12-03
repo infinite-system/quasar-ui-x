@@ -4,7 +4,7 @@ import XDialogError from './x/dialog/XDialogError.vue'
 import XDialogComponent from './x/dialog/XDialogComponent.vue'
 import XDialogLink from './x/dialog-link/XDialogLink.vue'
 import XLink from './x/link/XLink.vue'
-import { xDialog } from './x/dialog/XDialogHelpers.js'
+import { xDialog, payloadFn, redirectFn } from './x/dialog/XDialogHelpers.js'
 import ListenerTracker from "./x/utils/events";
 import { setupAsyncImport } from './x/utils/import.js'
 import { isAsync } from './x/utils/is.js'
@@ -17,13 +17,12 @@ function install (app, options) {
   ListenerTracker.init()
 
   if (typeof options !== 'undefined'
-    && typeof options.importConfig !== 'undefined'
+    && typeof options.XDialog.config !== 'undefined'
   ){
-    console.log('XDialog.props', XDialog.props)
-    XDialog.props.importConfig.default = () => options.importConfig
-    console.log('using options.importConfig.fn', options.importConfig)
+    XDialog.props.config.default = () => options.XDialog.config
+    // console.log('using options.XDialog.config.load.fn', options.XDialog.config.load.fn)
   } else {
-    console.log('using default importConfig.Fn')
+    // console.log('using default importConfig.Fn')
   }
 
   app.component(XDialog.name, XDialog)
@@ -48,6 +47,8 @@ export {
   XLink,
   isAsync,
   setupAsyncImport,
+  payloadFn,
+  redirectFn,
   ListenerTracker,
   install
 }
@@ -63,6 +64,8 @@ export default {
   XLink,
   isAsync,
   setupAsyncImport,
+  payloadFn,
+  redirectFn,
   ListenerTracker,
   install
 }

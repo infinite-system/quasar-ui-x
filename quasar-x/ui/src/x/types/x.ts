@@ -1,13 +1,16 @@
 import { PropType, ComponentPublicInstance, ComponentOptions, Component, ComputedOptions, MethodOptions } from "vue";
-import { QBtn, QDialogOptions, DialogChainObject, AddressbarColor, AppFullscreen, Cookies, Dark, Loading, LoadingBar, LocalStorage, QNotifyCreateOptions, Platform, Screen, SessionStorage } from "quasar";
-import { asyncImport, dynamicImporter, setupImport } from '../utils/import.js';
+import {
+  QBtn,
+  QDialogOptions
+} from "quasar";
+import { dynamicImporter } from '../utils/import.js';
+
 import { redirectFn, payloadFn } from "../dialog/XDialogHelpers.js";
+
 import XDialogLoading from "../dialog/XDialogLoading.vue";
 import XDialogError from "../dialog/XDialogError.vue";
-import { QVueGlobals } from "quasar/dist/types/globals";
-import { QNotifyUpdateOptions, VueClassProp, VueStyleProp } from "quasar/dist/types/api";
 
-// do not remove next line ComponentConstructor is necessery for the x.d.ts file
+// do not remove next line ComponentConstructor is necessary for the x.d.ts file
 export type ComponentConstructor<Component extends ComponentPublicInstance<Props, RawBindings, D, C, M> = ComponentPublicInstance<any>, Props = any, RawBindings = any, D = any, C extends ComputedOptions = ComputedOptions, M extends MethodOptions = MethodOptions> =
   { new (): Component }
   & ComponentOptions<Props, RawBindings, D, C, M>
@@ -32,26 +35,64 @@ type PropsWorkaround<T> = {
 export interface XDialogProps {
   id?: string
   modelValue?: boolean
-  options?: XDialogOptions | string
+  options?: QDialogOptions | string
   load?: boolean | string | object
   props?: object
-  button?: string | object
-  buttonProps?: object
+  btn?: string | object
+  btnProps?: object
   router?: boolean | string | object
-  routerRestart?: boolean
-  plugins?: [XDialogPlugins]
-  onCreate?: XDialogDisplaySetup | XDialogDisplayFn
-  onToggle?: XDialogDisplaySetup | XDialogDisplayFn
-  onShow?: XDialogDisplaySetup | XDialogDisplayFn
-  onHide?: XDialogDisplaySetup | XDialogDisplayFn
-  onLoad?: XDialogDisplaySetup | XDialogDisplayFn
-  onMount?: XDialogDisplaySetup | XDialogDisplayFn
-  onProps?: XDialogDisplaySetup | XDialogDisplayFn
-  onOk?: XDialogPromptSetup | XDialogPromptFn
-  onCancel?: XDialogPromptSetup | XDialogPromptFn
-  loadConfig?: object
-  payloadConfig?: object
-  dismissConfig?: object
+  plugins?: XDialogPlugins
+  onCreate?: XDialogDisplaySetup | XDialogDisplayFn | object
+  onToggle?: XDialogDisplaySetup | XDialogToggleFn | object
+  onShow?: XDialogDisplaySetup | XDialogDisplayFn | object
+  onHide?: XDialogDisplaySetup | XDialogDisplayFn | object
+  onUpdate?: XDialogDisplaySetup | XDialogDisplayFn | object
+  onLoad?: XDialogDisplaySetup | XDialogDisplayFn | object
+  onProps?: XDialogDisplaySetup | XDialogDisplayFn | object
+  onMount?: XDialogDisplaySetup | XDialogDisplayFn | object
+  onFail?: XDialogDisplaySetup | XDialogDisplayFn | object
+  onConfig?: XDialogDisplaySetup | XDialogConfigFn | object
+  onPlugins?: XDialogDisplaySetup | XDialogDisplayFn | object
+  onDestroy?: XDialogDisplaySetup | XDialogDisplayFn | object
+  onOk?: XDialogPromptSetup | XDialogPromptFn | object
+  onCancel?: XDialogPromptSetup | XDialogPromptFn | object
+  config?: XDialogConfig
+  debug?: boolean | Array<string>
+}
+
+export interface XDialogConfig {
+  load: XDialogConfigLoad
+  payload: XDialogConfigPayload
+  dismiss: XDialogConfigDismiss
+  router: XDialogConfigRouter
+}
+
+export interface XDialogConfigLoad {
+  fn: (element: HTMLElement) => any
+  loading: Component
+  error: Component
+  delay: number
+  timeout: number
+  pretty: boolean
+}
+
+export interface XDialogConfigDismiss {
+  redirect: XDialogConfigDismissRedirect
+}
+
+export interface XDialogConfigPayload {
+  on: boolean
+  fn: (payload: any) => void | false
+}
+
+export interface XDialogConfigRouter {
+  restart: boolean
+  emit: boolean
+}
+
+export interface XDialogConfigDismissRedirect {
+  on: boolean
+  fn: (route: object, router: object) => void
 }
 
 export const propsXDialog: PropsWorkaround<XDialogProps> = {
@@ -62,10 +103,9 @@ export const propsXDialog: PropsWorkaround<XDialogProps> = {
   load: { default: undefined, type: [Boolean, String, Object, Function] },
   props: { default: () => ({}), type: Object },
 
-  button: { default: QBtn, type: [String, Object] },
-  buttonProps: { default: () => ({}), type: Object },
+  btn: { default: QBtn, type: [String, Object] },
+  btnProps: { default: () => ({}), type: Object },
   router: { default: false, type: [Boolean, String, Object] },
-  routerRestart: { default: false, type: Boolean },
   plugins: { default: [], type: Object },
   // events
   onCreate: { default: null, type: [Function, Object] },
@@ -78,30 +118,38 @@ export const propsXDialog: PropsWorkaround<XDialogProps> = {
   onCancel: { default: null, type: [Function, Object] },
   onUpdate: { default: null, type: [Function, Object] },
   onProps: { default: null, type: [Function, Object] },
-
-  // extra configs
-  loadConfig: {
+  onFail: { default: null, type: [Function, Object] },
+  onConfig: { default: null, type: [Function, Object] },
+  onPlugins: { default: null, type: [Function, Object] },
+  onDestroy: { default: null, type: [Function, Object] },
+  config: {
     default: () => ({
-      fn: dynamicImporter,
-      loading: XDialogLoading,
-      error: XDialogError,
-      delay: 150,
-      timeout: 0,
-      pretty: false
-    }), type: [Object]
+      load: {
+        fn: dynamicImporter,
+        loading: XDialogLoading,
+        error: XDialogError,
+        delay: 150,
+        timeout: 0,
+        pretty: false
+      },
+      payload: {
+        on: true,
+        fn: payloadFn
+      },
+      dismiss: {
+        redirect: {
+          on: true,
+          fn: redirectFn
+        }
+      },
+      router: {
+        restart: false,
+        emit: false
+      }
+    }),
+    type: Object
   },
-  payloadConfig: {
-    default: () => ({
-      on: true,
-      fn: payloadFn
-    }), type: [Object]
-  },
-  dismissConfig: {
-    default: () => ({
-      on: true,
-      fn: redirectFn
-    }), type: [Object]
-  },
+  debug: { default: false, type: [Boolean, Object] }
 }
 
 export interface XDialogComponentProps {
@@ -112,42 +160,67 @@ export const propsXDialogComponent: PropsWorkaround<XDialogComponentProps> = {
   dialog: { default: () => ({}), type: Object as PropType<XDialog> },
 }
 
-type XDialogDisplayFn = () => void | boolean
-
-export interface XDialogDisplaySetup {
-  fn?: XDialogPromptFn
-  reset?: boolean
+export interface XDialogDisplayFnArgs {
+  dialog: XDialog
+  router: object
+  route: object
 }
 
-type XDialogPromptFn = (payload: any) => void | boolean
+export interface XDialogPayloadFnArgs extends XDialogDisplayFnArgs {
+  payload: any
+}
+
+export interface XDialogToggleFnArgs extends XDialogDisplayFnArgs {
+  toggle: any
+}
+
+export interface XDialogConfigFnArgs extends XDialogDisplayFnArgs {
+  config: object
+}
+
+export declare type XDialogDisplayFn<T = any> = (args: XDialogDisplayFnArgs) => void | boolean
+export declare type XDialogToggleFn = (args: XDialogToggleFnArgs) => void | boolean
+export declare type XDialogConfigFn = (args: XDialogConfigFnArgs) => void | boolean
 
 export interface XDialogPromptSetup {
   fn?: XDialogPromptFn
   reset?: boolean
-  payloadFn?: (element: Element) => any
 }
 
+declare type XDialogPromptFn = (args:XDialogPayloadFnArgs) => void | boolean
+
+export interface XDialogDisplaySetup {
+  fn?: XDialogDisplayFn | XDialogToggleFn
+  reset?: boolean
+  payloadFn?: (element: Element) => any
+}
 
 export interface XDialog extends XDialogChain {
   xDialog: () => XDialogProps
   xId: () => string
-  xOptions: () => XDialogOptions
-  xFile: () => string | object
+  xOptions: () => QDialogOptions
+  xLoad: () => string | object
   xProps: () => XDialogProps
-  xState: () => object
+  xState: () => XDialogState
+  xClass: () => string
+  xConfig: () => XDialogConfig
   xDOM: () => XDialogDOM
 }
 
 export interface XDialogChain {
   toggle: () => XDialogChain
   show: () => XDialogChain
+  showAsync: () => XDialogChain
   hide: (command?: string | null) => XDialogChain
+  hideAsync: () => XDialogChain
   ok: XDialogPromptSetup | XDialogPromptFn
   cancel: XDialogPromptSetup | XDialogPromptFn
-  update: (opts: XDialogOptions) => XDialogChain
-  load: (file: string | object) => XDialogChain
+  update: (opts: QDialogOptions) => XDialogChain
+  load: (component: string | object | Component) => XDialogChain
+  loadAsync: () => XDialogChain
   props: (props: object, options: object) => XDialogChain
   plugins: (plugins: [XDialogPlugins]) => XDialogChain
+  config?: (config: XDialogConfig) => void
   // events
   onCreate: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
   onToggle: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
@@ -155,24 +228,31 @@ export interface XDialogChain {
   onHide: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
   onOk: (setup: XDialogPromptSetup | XDialogPromptFn) => XDialogChain
   onCancel: (setup: XDialogPromptSetup | XDialogPromptFn) => XDialogChain
-  onUpdate: () => XDialogChain
-  onLoad: () => XDialogChain
-  onProps: () => XDialogChain
+  onUpdate: (setup: XDialogPromptSetup | XDialogPromptFn) => XDialogChain
+  onLoad: (setup: XDialogPromptSetup | XDialogPromptFn) => XDialogChain
+  onProps: (setup: XDialogPromptSetup | XDialogPromptFn) => XDialogChain
+  onFail: (setup: XDialogPromptSetup | XDialogPromptFn) => XDialogChain
+  onConfig: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
+  onPlugins: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
+}
+
+export interface XDialogState {
+  isVisible: boolean
+  isShown: boolean
+  isShowing: boolean
+  isHiding: boolean
+  isLoading: boolean
+  isLoaded: boolean
+  isMounted: boolean
+  isFailed: boolean
 }
 
 export interface XDialogPlugins {
-  pluginName: (dialog: XDialog, name: string) => void
-}
-
-export interface XDialogOptions extends QDialogOptions {
-  component?: Component | string
-  /**
-   * User defined props which will be forwarded to underlying custom component if 'component' prop is used
-   */
-  componentProps?: any
+  key: (dialog: XDialog, name: string) => void
 }
 
 export interface XDialogDOM {
+  xComponent: () => Element
   xWrap: () => Element
   xInner: () => Element
   xBackdrop: () => Element | null

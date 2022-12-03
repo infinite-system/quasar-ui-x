@@ -3,7 +3,7 @@ import createComponent from './utils/create'
 import { extractData, extractQuery } from './utils/extract-data'
 import { isObject, isFunction, isEmpty, isPromise, isAsync, isArray, isString } from './utils/is'
 import keepAlive from './utils/keep-alive'
-import { err, warn, info, log, logify, stringify } from './utils/log'
+import { err, warn, info, log, dbg, logify, stringify } from './utils/log'
 import mergeDeep from './utils/merge-deep'
 import prop from './utils/prop'
 import size from './utils/size'
@@ -28,6 +28,7 @@ export {
   err,
   warn,
   info,
+  dbg,
   log,
   logify,
   stringify,

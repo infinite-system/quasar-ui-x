@@ -1,5 +1,5 @@
 import ResizeSensor from "css-element-queries/src/ResizeSensor";
-import { isObject, log, isFunction, createComponent, extractData, warn } from '../utils'
+import { isObject, log, isFunction, createComponent, extractData, warn, mergeDeep, logify } from '../utils'
 import { h, isRef, markRaw } from 'vue'
 import XDialog from './XDialog.vue'
 
@@ -27,6 +27,7 @@ export function wrap (dialogId, message = '') {
 }
 
 export function setButtonDefaults (defaults, options, btnDefaults) {
+  const btnOptions = {}
   for (let btn in btnDefaults) {
 
     let btnEnabledByDefault = btn in defaults && (defaults[btn] || isObject(defaults[btn]))
@@ -35,7 +36,7 @@ export function setButtonDefaults (defaults, options, btnDefaults) {
     }
     // if options are set to boolean, we set the default btn object
     if (btn in options && options[btn] === true) {
-      options[btn] = btnDefaults[btn];
+      btnOptions[btn] = btnDefaults[btn];
     }
     /**
      * set options buttons names to __ok__, __cancel__
@@ -43,10 +44,15 @@ export function setButtonDefaults (defaults, options, btnDefaults) {
      * in case people are relying on __ok__, __cancel__ in their template definitions,
      * to get the functionality of those buttons
      */
-    if (btn in options && isObject(options[btn]) && 'name' in options[btn]) {
-      options[btn].name = btnDefaults[btn].name
+    if (btn in options && isObject(options[btn])) {
+      btnOptions[btn] = mergeDeep({}, btnDefaults[btn], options[btn])
+      // options[btn] = opts
+      if ('name' in options[btn]){
+        btnOptions[btn].name = btnDefaults[btn].name
+      }
     }
   }
+  return btnOptions
 }
 
 export function redirectFn (router, route) {
