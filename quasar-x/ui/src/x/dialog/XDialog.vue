@@ -1,6 +1,6 @@
 <script lang="ts">export default { name: 'XDialog', inheritAttrs: false }</script>
 <script setup lang="ts">
-import { ref, watch, computed, toRefs, defineProps, onBeforeUnmount, useSlots, isRef, h, markRaw, shallowRef, isReactive } from 'vue';
+import { ref, watch, computed, toRefs, defineProps, onBeforeUnmount, useSlots, isRef, h, markRaw, shallowRef, isReactive, onBeforeUpdate, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { QBtn, useQuasar } from 'quasar'
 import { dbg, warn, mergeDeep, byId, onFrame, isFunction, isObject, sleep, isArray, err, prop } from '../utils.js'
@@ -53,24 +53,28 @@ function x (type, ...args) {
   }
 }
 
-async function destroy(){
+async function destroy () {
   if (isVisible()) {
     /**
      * prevent rerouting on dismiss that fires when it determines
      * if it's moving back in history or has to move forward with push
      * @see function dialogRedirect
      */
-    runDisplayCallbacks('destroy')
     XDialog.config({ dismiss: { redirect: { on: false } } })
-    // alert('unmount')
     await XDialog.hideAsync()
     XDialog.config({ dismiss: { redirect: { on: true } } })
     remove(id)
   }
+  runDisplayCallbacks('destroy')
 }
+
 // onBeforeUnmount MUST always be before the watch functions
-onBeforeUnmount(() => {
-  destroy()
+onBeforeUnmount(async () => {
+
+
+})
+onUnmounted(async () => {
+  await destroy()
 })
 
 const vueRouter = useRouter()
@@ -103,9 +107,10 @@ const loadComponent = ref(null)
 const resolvedImport = shallowRef(null)
 
 const id = p.id || 'XDialog_' + dialogId()
+const loadId = `${id}__load`
 
 const defaultClass = computed(() => component.value ? 'x-dialog x-dialog-load' : 'x-dialog')
-const defaultInnerClass = computed(() => component.value ? 'x-dialog__inner x-dialog__inner-load' : 'x-dialog__inner')
+const defaultInnerClass = computed(() => component.value ? 'x-dialog-plugin x-dialog-plugin-load' : 'x-dialog-plugin')
 
 const defaults = {
   message: wrap(id),
@@ -373,11 +378,11 @@ const XDialog = {
   },
   xDOM () {
     return {
-      xComponent: () => byId(id)?.closest('[data-v-app]'),
-      xWrap: () => byId(id)?.closest('.q-dialog'),
-      xInner: () => byId(id)?.closest('.q-dialog__inner'),
-      xBackdrop: () => byId(id)?.closest('.q-dialog').getElementsByClassName('q-dialog__backdrop')?.[0],
-      xContent: () => byId(id)?.closest('.q-dialog-plugin'),
+      xComponent: () => byId(loadId)?.closest('[data-v-app]'),
+      xWrap: () => byId(loadId)?.closest('.q-dialog'),
+      xInner: () => byId(loadId)?.closest('.q-dialog__inner'),
+      xBackdrop: () => byId(loadId)?.closest('.q-dialog').getElementsByClassName('q-dialog__backdrop')?.[0],
+      xContent: () => byId(loadId)?.closest('.q-dialog-plugin'),
     }
   },
   xClass () {
@@ -386,17 +391,21 @@ const XDialog = {
   xPlugins: () => allPlugins,
   xConfig: () => config
 }
+
 const callbackParams = { dialog: XDialog, router: vueRouter, route: vueRoute }
+
 initCallbacks()
+
 // handle route-link options in string form
 // router can only set string form options, it cannot set objects
 // so we convert those options from string into the object
+
 const opts = parseOptions(localOptions.value)
 
 let dialogOptions = prepareOptions({}, defaults, opts)
 
 function isVisible () {
-  return !!(QDialog && byId(id))
+  return !!(QDialog && byId(loadId))
 }
 
 function hide (command = '') {
@@ -504,7 +513,7 @@ function update (options) {
   // save the DOM state of the dialog
   let content = ''
   onFrame(() => { // onFrame is a MUST here
-    content = byId(id)
+    content = byId(loadId)
     // we need to wait for the content to render first
     // update the options
     QDialog.update(dialogOptions)
@@ -513,7 +522,7 @@ function update (options) {
   // restore the DOM state of the dialog
   // onFrame is a MUST here
   onFrame(() => {
-    byId(id)?.replaceWith(content)
+    byId(loadId)?.replaceWith(content)
     runDisplayCallbacks('update')
   })
 
@@ -546,20 +555,29 @@ function setConfig (cfg) {
   return XDialog
 }
 
+
 function setPlugins (plugins) {
+
   for (const name in plugins) {
+
     const fn = plugins[name]
     allPlugins.push(name)
+
     if (isFunction(fn)) {
+
       const pluginExpose = fn(XDialog, name)
+
       if (isObject(pluginExpose) || isFunction(pluginExpose)) {
-        XDialog[`$${name}`] = pluginExpose
+        const aliasPluginName = name.replace(/^\$+/, '')
+        XDialog[`$${aliasPluginName}`] = pluginExpose
       }
     } else {
       warn(`XDialog plugin '${name}' has to be a function`)
     }
   }
+
   runDisplayCallbacks('plugins')
+
   return XDialog
 }
 
@@ -640,15 +658,19 @@ function nativePlugin (dialog, name) {
     fn: () => {
       // x('nativePlugin', 'onShow()', { xOptions: dialog.xOptions() })
       XDialog.xDOM().xComponent().setAttribute('x-type', 'XDialog')
-      XDialog.xDOM().xComponent().setAttribute('id', `${id}_component`)
+      XDialog.xDOM().xComponent().setAttribute('id', id)
+
+      // give access from DOM to XDialog
       XDialog.xDOM().xComponent().$XDialog = XDialog
-      fix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow(dialog.xId(), dialog.xOptions())
+
+      fix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow(loadId, dialog.xOptions())
+
       setOkCancelCallbacks()
     },
     plugin: name
   }).onLoad({
     fn: () => {
-      x('nativePlugin', 'onLoad()')
+      // x('nativePlugin', 'onLoad()')
       setOkCancelCallbacks()
     },
     plugin: name
@@ -723,7 +745,6 @@ function create () {
   QDialog.onDismiss(dismiss)
 
   // must be before callback definitions
-
 
   isCreated.value = true
   runDisplayCallbacks('create')
@@ -903,7 +924,7 @@ defineExpose(XDialog)
              @click="XDialog.toggle()">
     <slot :dialog="XDialog" />
   </component>
-  <Teleport v-if="isShown && (validComponent || hasTemplate)" :to="'#'+id">
+  <Teleport v-if="isShown && (validComponent || hasTemplate)" :to="`#${loadId}`">
     <component v-if="(isLoaded || isLoading) && validComponent && !loadingComponentError && resolvedImport"
                :is="resolvedImport"
                v-bind="localComponentProps"

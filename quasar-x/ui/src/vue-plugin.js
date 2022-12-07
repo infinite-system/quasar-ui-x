@@ -9,6 +9,7 @@ import ListenerTracker from "./x/utils/events";
 import { setupAsyncImport } from './x/utils/import.js'
 import { isAsync } from './x/utils/is.js'
 import { useX } from './x/utils/use-x'
+import xHistory, { extendHistory } from "./x/utils/private/extend-history";
 
 const version = __UI_VERSION__
 
@@ -16,13 +17,8 @@ function install (app, options) {
 
   ListenerTracker.init()
 
-  if (typeof options !== 'undefined'
-    && typeof options.XDialog.config !== 'undefined'
-  ){
-    XDialog.props.config.default = () => options.XDialog.config
-    // console.log('using options.XDialog.config.load.fn', options.XDialog.config.load.fn)
-  } else {
-    // console.log('using default importConfig.Fn')
+  if (options && 'XDialog' in options){
+    XDialog.props.config.default = () => options.XDialog
   }
 
   app.component(XDialog.name, XDialog)
@@ -32,8 +28,14 @@ function install (app, options) {
   app.component(XDialogLink.name, XDialogLink)
   app.component(XLink.name, XLink)
 
-  // provide x
-  app.provide('x', { dialog : xDialog(app) })
+  extendHistory()
+
+  const provideX = {
+    dialog : xDialog(app),
+    history : xHistory
+  }
+
+  app.provide('$x', provideX)
 }
 
 export {

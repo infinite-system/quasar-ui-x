@@ -1,4 +1,5 @@
 <script setup>
+import { onBeforeUpdate } from "vue";
 defineProps(['test'])
 </script>
 <template>

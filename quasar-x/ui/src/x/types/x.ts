@@ -32,7 +32,7 @@ type PropsWorkaround<T> = {
   [Key in keyof T]-?: PropOptionsWorkaroundRequired<T[Key]> & OptionalRequired<T[Key]>
 }
 
-export interface XDialogProps {
+export interface XDialogProps  {
   id?: string
   modelValue?: boolean
   options?: QDialogOptions | string
@@ -221,6 +221,7 @@ export interface XDialogChain {
   props: (props: object, options: object) => XDialogChain
   plugins: (plugins: [XDialogPlugins]) => XDialogChain
   config?: (config: XDialogConfig) => void
+  destroy: () => void
   // events
   onCreate: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
   onToggle: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
@@ -234,6 +235,7 @@ export interface XDialogChain {
   onFail: (setup: XDialogPromptSetup | XDialogPromptFn) => XDialogChain
   onConfig: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
   onPlugins: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
+  onDestroy: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
 }
 
 export interface XDialogState {
@@ -259,6 +261,12 @@ export interface XDialogDOM {
   xContent: () => Element
 }
 
+export interface XVueHistory {
+  isInitialLoad: boolean
+  determineDirection: (event: Event) => string
+}
+
 export interface XVueGlobals {
   dialog: (opts: XDialogProps) => XDialog
+  history: XVueHistory
 }

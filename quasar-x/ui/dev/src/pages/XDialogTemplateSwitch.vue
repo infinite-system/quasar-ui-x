@@ -12,9 +12,6 @@ function switchState(){
   }, 3000)
 }
 
-onMounted(() => {
-  switchState()
-})
 </script>
 <template>
   <q-page padding>
@@ -25,6 +22,7 @@ onMounted(() => {
       :options="{
         ok: false
       }"
+      @show="switchState"
     >
       <template #default>Open</template>
       <template #template="{ dialog }">

@@ -15,15 +15,11 @@ export function parseOptions (options) {
 
 export function remove (dialogId) {
   const domContent = document.getElementById(dialogId);
-  if (domContent) {
-    // get the QDialog component wrapper DOM element
-    domContent.closest('[data-v-app]').remove()
-    domContent.remove()
-  }
+  domContent?.remove()
 }
 
 export function wrap (dialogId, message = '') {
-  return `<div id="${dialogId}">${message}</div>`
+  return `<div id="${dialogId}__load">${message}</div>`
 }
 
 export function setButtonDefaults (defaults, options, btnDefaults) {
@@ -114,9 +110,9 @@ export function getAndroidNavbarHeight (dialogId) {
  * @param dialogId
  * @param dialogOptions
  */
-export function fix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow (dialogId, dialogOptions) {
+export function fix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow (loadId, dialogOptions) {
 
-  let dialogContent = document.getElementById(dialogId);
+  let dialogContent = document.getElementById(loadId);
 
   if (dialogContent) {
 

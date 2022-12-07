@@ -1,7 +1,6 @@
 <script setup>
 defineProps(['test'])
-const emit = defineEmits([])
 </script>
 <template>
-  <q-page>Library</q-page>
+  <q-page>Watch</q-page>
 </template>

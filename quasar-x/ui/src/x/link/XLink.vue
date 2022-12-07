@@ -7,7 +7,7 @@ import { linkFn } from "../link/XLinkHelpers";
 
 const props = defineProps({
   ...RouterLink.props,
-  btn: { default: 'a', type: [String, QBtn] },
+  btn: { default: 'a', type: [String, Object] },
   fn: { default: () => linkFn, type: [Function] }
 })
 
