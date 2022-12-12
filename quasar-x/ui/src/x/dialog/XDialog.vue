@@ -1,9 +1,9 @@
 <script lang="ts">export default { name: 'XDialog', inheritAttrs: false }</script>
 <script setup lang="ts">
-import { ref, watch, computed, toRefs, defineProps, onBeforeUnmount, useSlots, isRef,  shallowRef } from 'vue'
+import { ref, watch, computed, toRefs, defineProps, onBeforeUnmount, useSlots, isRef, shallowRef, reactive, toRaw } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { dbg, warn, extend, byId, onFrame, isFunction, isObject, sleep, isArray,  prop } from '../utils.js'
+import { dbg, warn, extend, byId, onFrame, isFunction, isObject, sleep, isArray } from '../utils.js'
 import {
   dialogId, remove, wrap, parseOptions, setButtonDefaults,
   fix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow
@@ -22,17 +22,10 @@ const emit = defineEmits([
 const { modelValue, options, load: component, props: componentProps, router } = toRefs(p)
 
 const defaultConfig = propsXDialog.config.default();
+const fullConfig = reactive(p.config)
+extend(fullConfig, extend({}, defaultConfig, p.config))
 
-const fullConfig = prop(p.config)
-// if (p.config !== defaultConfig) {
-  // we have to use double extend here
-  // because fullConfig and p.config refer to the same object
-  extend(fullConfig, extend({}, defaultConfig, p.config))
-// }
-
-// return
-
-let debugAll = prop(p.debug)
+let debugAll = toRaw(p.debug)
 let debugSpecific = {}
 if (isArray(p.debug)) {
   p.debug.forEach(type => debugSpecific[type] = 1)
@@ -40,6 +33,13 @@ if (isArray(p.debug)) {
 }
 
 function log (type, ...args) {
+  if (isObject(type)) {
+    for (const fnName in type) {
+      args.unshift(type)
+      type = fnName
+      break;
+    }
+  }
   if (debugAll || typeof debugSpecific[type] !== 'undefined') {
     dbg('XDialog', type, ...args)
   }
@@ -157,28 +157,28 @@ const isLoaded = ref(false)
 const isMounted = ref(false)
 const isFailed = ref(false)
 
-let callbacks = []
-const allPlugins = []
+let callbacks = {
+  // display callbacks
+  create: [],
+  toggle: [],
+  show: [],
+  hide: [],
+  update: [],
+  load: [],
+  props: [],
+  mount: [],
+  fail: [],
+  config: [],
+  plugins: [],
+  destroy: [],
+  // prompt callbacks
+  ok: [],
+  cancel: [],
+}
 
-function initCallbacks () {
-  callbacks = {
-    // display callbacks
-    create: [],
-    toggle: [],
-    show: [],
-    hide: [],
-    update: [],
-    load: [],
-    props: [],
-    mount: [],
-    fail: [],
-    config: [],
-    plugins: [],
-    destroy: [],
-    // prompt callbacks
-    ok: [],
-    cancel: [],
-  }
+const allPlugins = {}
+
+function init () {
 
   setPlugins({ nativePlugin })
   setPlugins(p.plugins)
@@ -199,7 +199,6 @@ function initCallbacks () {
   if (p.onOk) setPromptCallbacks('ok', p.onOk)
   if (p.onCancel) setPromptCallbacks('cancel', p.onCancel)
 }
-
 
 const XDialog = {
 
@@ -237,7 +236,7 @@ const XDialog = {
       i++ && await sleep(interval)
     }
 
-    log('showAsync', { await: parseInt(i * interval) })
+    log({ showAsync: XDialog.showAsync, await: parseInt(i * interval) })
   },
 
   onShow (setup) {
@@ -257,7 +256,7 @@ const XDialog = {
       i++ && await sleep(interval)
     }
 
-    log('hideAsync', { await: parseInt(i * interval) })
+    log({ hideAsync: XDialog.hideAsync, await: parseInt(i * interval) })
   },
 
   onHide (setup) {
@@ -306,7 +305,7 @@ const XDialog = {
       i++ && await sleep(interval)
     }
 
-    log('loadAsync', { await : i * interval })
+    log({ loadAsync: XDialog.loadAsync, await: i * interval })
   },
 
   onLoad (setup) {
@@ -329,21 +328,21 @@ const XDialog = {
   plugins: setPlugins,
 
   onPlugins (setup) {
-    runDisplayCallbacks('plugins')
+    runDisplayCallbacks('plugins', setup)
     return this
   },
 
   config: setConfig,
 
   onConfig (setup) {
-    runDisplayCallbacks('config')
+    runDisplayCallbacks('config', setup)
     return this
   },
 
   destroy,
 
   onDestroy (setup) {
-    runDisplayCallbacks('destroy')
+    runDisplayCallbacks('destroy', setup)
     return this
   },
 
@@ -381,7 +380,7 @@ const XDialog = {
 
 const callbackParams = { dialog: XDialog, router: vueRouter, route: vueRoute }
 
-initCallbacks()
+init()
 
 // handle route-link options in string form
 // router can only set string form options, it cannot set objects
@@ -414,7 +413,7 @@ function load (component) {
 
   isLoading.value = true
 
-  log('load', { 'p.load': p.load, 'isRef': isRef(p.load), component: component })
+  log({ load, loadProp: p.load, propIsRef: isRef(p.load), component: component })
 
   emit('update:load', component)
 
@@ -425,18 +424,15 @@ function load (component) {
 function setProps (props, config = { update: true }) {
 
   if (!config.update) {
-    for(const prop in localComponentProps.value){
+    for (const prop in localComponentProps.value) {
       delete localComponentProps.value[prop]
     }
   }
   extend(localComponentProps.value, props)
-  emit('update:props', localComponentProps.value)
-    // alert('yaaa')
-  // if (isRef(props)) {
-  //   emit('update:props', localComponentProps.value)
-  // }
 
-  runDisplayCallbacks('props', config)
+  emit('update:props', localComponentProps.value)
+
+  runDisplayCallbacks('props', { props: localComponentProps.value, config })
 
   return XDialog
 }
@@ -456,7 +452,7 @@ function uncreate () {
 
 function runDisplayCallbacks (type, extra = {}, ...args) {
   callbacks[type].forEach(call => call.fn({ ...callbackParams, ...extra }, ...args))
-  namedEmit(type, ...args)
+  namedEmit(type, { ...callbackParams, ...extra }, ...args)
 }
 
 function dismissRedirect () {
@@ -495,8 +491,8 @@ function dismiss () {
 
 function update (options) {
 
+  log({ update, options })
 
-  log('update', { options })
   prepareOptions(dialogOptions, defaults, options)
 
   setClasses(options)
@@ -538,7 +534,6 @@ function setPlugins (plugins) {
   for (const name in plugins) {
 
     const fn = plugins[name]
-    allPlugins.push(name)
 
     if (isFunction(fn)) {
 
@@ -547,13 +542,14 @@ function setPlugins (plugins) {
       if (isObject(pluginExpose) || isFunction(pluginExpose)) {
         const aliasPluginName = name.replace(/^\$+/, '')
         XDialog[`$${aliasPluginName}`] = pluginExpose
+        allPlugins[`$${aliasPluginName}`] = pluginExpose
       }
     } else {
       warn(`XDialog plugin '${name}' has to be a function`)
     }
   }
 
-  runDisplayCallbacks('plugins')
+  runDisplayCallbacks('plugins', { plugins: allPlugins })
 
   return XDialog
 }
@@ -663,7 +659,7 @@ function getPayload (payloadFn) {
 
   const payload = payloadFn(XDialog.xDOM().xInner())
 
-  log('payload', { payload })
+  log({ getPayload, payload })
 
   return payload
 }
@@ -681,7 +677,7 @@ function okCancel (type, event = null) {
         ? callback.payloadFn
         : defaultPayloadFn
 
-    log('payload', { payloadFn: payloadFn, 'config.payload': fullConfig.payload })
+    log({ okCancel, payloadFn: payloadFn, payloadConfig: fullConfig.payload })
 
     payload = getPayload(payloadFn)
 
@@ -696,7 +692,7 @@ function okCancel (type, event = null) {
   }
 
   // emit events up to parent
-  namedEmit(type, payload, stopped)
+  namedEmit(type, { ...callbackParams, payload, stopped })
 
   if (!stopped) setShow(false)
 }
@@ -722,11 +718,8 @@ function create () {
   // Create QDialog
   QDialog = $q.dialog(dialogOptions)
 
-
   // Set the main dismiss event
   QDialog.onDismiss(dismiss)
-
-  // must be before callback definitions
 
   isCreated.value = true
   runDisplayCallbacks('create')
@@ -740,9 +733,10 @@ function create () {
 
     runDisplayCallbacks('show')
 
-    // if there is not component being loaded, loading is complete at this point
+
     if (!p.load) {
 
+      // if there is not component being loaded, loading is complete at this point
       isLoading.value = false
       isLoaded.value = true
 
@@ -771,36 +765,30 @@ function componentChanged (newA, prevA) {
 
 // Smart watcher for managing 'modelValue' prop
 // from parent and keeping it reactive.
-watch(modelValue, () => {
-  localShow.value = modelValue.value
-}, { immediate: true })
+watch(modelValue, () => localShow.value = modelValue.value, { immediate: true })
 watch(localShow, () => localShow.value ? create() : hide(), { immediate: true })
 
-// watch(options, () => {
-//   localOptions.value = options.value
-//   x('watch.options', { options: options.value})
-// }, { immediate: true, deep: true })
+function updateOptions () {
+  return isShown.value || isShowing.value
+      ? update(localOptions.value)
+      : prepareOptions(dialogOptions, defaults, localOptions.value)
+}
 
-watch(localOptions, () => {
-      isShown.value || isShowing.value
-          ? update(localOptions.value)
-          : prepareOptions(dialogOptions, defaults, localOptions.value)
-    }, { immediate: true, deep: true }
-);
+watch(localOptions, updateOptions, { immediate: true, deep: true });
 
 const validComponent = computed(() => notEmptyComponent(localComponent.value))
 
 watch(component, () => localComponent.value = component.value, { immediate: true })
 
-const loadFile = ref(null)
-// Smart loaded component watcher
-watch([localComponent, localShow], (newA, prevA) => {
+// Smart load component change
+function loadChange (newA, prevA) {
   // change component only if shown & changed to save on memory and rendering
   if (localShow.value && validComponent && componentChanged(newA, prevA)) {
     loadComponent.value = localComponent.value
   }
-}, { immediate: true });
+}
 
+watch([localComponent, localShow], loadChange, { immediate: true });
 
 const loading = {
 
@@ -833,9 +821,11 @@ const loading = {
 
     onFrame(() => {
       if (loadFile.value) {
+
         isLoading.value = false
         isLoaded.value = true
         isFailed.value = false
+
         runDisplayCallbacks('load')
       }
     }, 50)
@@ -857,20 +847,20 @@ const loading = {
   }
 }
 
+const loadFile = ref(null)
+
 const loadFn = setupAsyncImport(fullConfig.load.fn, fullConfig.load.timeout)
 
-watch([loadComponent, localShow], async () => {
+async function watchLoad () {
 
   if (loadComponent.value && localShow.value) {
 
     try {
-      log('load', {
-        component: loadComponent.value,
-        config: fullConfig.load
-      })
+
+      log({ watchLoad, component: loadComponent.value, loadConfig: fullConfig.load })
 
       // this reassignment is necessary loadFile.value is used later in
-      // watch(isHiding, ...) to cancel import if dialog is dismissed
+      // watch(isHiding, preventOnLoad) to cancel import if dialog is dismissed
       loadFile.value = loadComponent.value
 
       loading.init(loadComponent.value)
@@ -883,24 +873,23 @@ watch([loadComponent, localShow], async () => {
       loading.error(e)
     }
   }
-}, { immediate: true })
 
-watch(isHiding, () => {
+}
+
+watch([loadComponent, localShow], watchLoad, { immediate: true })
+
+function preventOnLoad () {
   // prevents it from emitting onLoad events
   // when ok / cancel / dismiss
   // is pressed before the component is loaded
   if (isHiding.value) loadFile.value = null
-});
+}
 
-// seems like we do not even need to watch these
-// watch(componentProps, () => localComponentProps.value = componentProps.value, { deep: true });
-// watch(() => p.config, () => {
-//   extend(fullConfig, p.config)
-// }, { deep: true })
+watch(isHiding, preventOnLoad);
 
 function emitMount (...args) {
   isMounted.value = true
-  runDisplayCallbacks('mount', {}, ...args)
+  runDisplayCallbacks('mount', { ...callbackParams }, ...args)
 }
 
 defineExpose(XDialog)

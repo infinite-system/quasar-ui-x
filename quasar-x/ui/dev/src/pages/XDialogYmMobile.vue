@@ -107,7 +107,7 @@ const menu = {
     seamless: true,
     ok: false
   },
-  load: () => import('../components/YmMobile/Menu.vue'),
+  load: () => import('../components/YmMobile/Dialogs/Menu.vue'),
   props: { player, go },
   onLoad: () => {
     setInterval(() => {
@@ -151,7 +151,7 @@ const playerDialog = {
       }
     }
   },
-  load: import('src/components/YmMobile/Player.vue'),
+  load: import('src/components/YmMobile/Dialogs/Player.vue'),
   props: {
     app,
     player,
@@ -166,32 +166,32 @@ const playerDialog = {
   }
 }
 
+let _Player
+
 function Player () {
-  const dom = byId('Player')
-  return dom ? dom.$XDialog : $x.dialog(playerDialog)
+  return _Player ? _Player : _Player = $x.dialog(playerDialog)
+}
+
+function notDialogView (route) {
+  // route is not 'watch' and not all other dialog views, like 'search', 'user', etc.
+  return !app.dialogViews.includes(route.name)
+}
+
+function onBackForward (fn) {
+  // onBackForward history change
+  // https://stackoverflow.com/a/58950454/1502706
+  addEventListener('popstate', fn)
 }
 
 onMounted(() => {
 
-  function notDialogView (route) {
-    return app.history === 'replace'
-      // route is not the 'watch'
-      ? route.name !== 'watch'
-      // or if app.history === 'push'
-      // route is not 'watch' and not all other dialog views, like 'search', 'user', etc.
-      : !app.dialogViews.includes(route.name)
-  }
-
-  // https://stackoverflow.com/a/58950454/1502706
-  addEventListener('popstate', function(event) {
-
+  onBackForward(() => {
     const current = resolve(currentPath())
 
     if (notDialogView(current)) {
       unfreezeView()
       setBeforeWatchPath(current.fullPath)
     }
-
   })
 
   if (notDialogView(route)) {
@@ -206,7 +206,7 @@ onMounted(() => {
   const plyr = new Plyr('#plyr');
 })
 
-watch(route, () => {
+watch(() => route.name, () => {
 
   if (route.name === 'watch') {
     player.view = 'full'
@@ -214,7 +214,7 @@ watch(route, () => {
     player.view = player.item ? 'folded' : 'hidden'
   }
 
-}, { immediate: true, deep: true })
+}, { immediate: true })
 
 watch(() => player.item, () => {
 
@@ -226,11 +226,7 @@ watch(() => player.item, () => {
 })
 
 function goBeforeWatch () {
-
-  console.log('beforeWatchPath.value', beforeWatchPath.value,
-    resolve(beforeWatchPath.value).fullPath,
-    resolve(beforeWatchPath.value).query)
-
+  console.log('beforeWatchPath.value', beforeWatchPath.value)
   return go(beforeWatchPath.value)
 }
 
@@ -256,7 +252,15 @@ function goBackOrHome () {
   }
 }
 
-function foldPlayer () {
+function isWatchView () {
+  return route.name === 'watch'
+}
+
+function playerIsFoldingHiding () {
+  return ['hidden', 'folded'].includes(player.view)
+}
+
+function playerFoldMoveHistory () {
   if (getBeforeWatchPath()) {
     return goBeforeWatch()
   } else {
@@ -267,14 +271,11 @@ function foldPlayer () {
 watch(() => player.view, () => {
 
   if (player.view === 'hidden') {
-    player.item = false
+    player.item = null
   }
 
-  if (
-    route.name === 'watch' // is 'watch' view
-    && ['hidden', 'folded'].includes(player.view) // & hiding or folding
-  ) {
-    foldPlayer()
+  if (isWatchView() && playerIsFoldingHiding()) {
+    playerFoldMoveHistory()
   }
 })
 
@@ -304,9 +305,9 @@ function replace (to) {
 
 function currentPath () {
   const { pathname, search, hash } = document.location
-  const fullPath = pathname + search + hash
-  console.log('fullPath', fullPath)
-  return fullPath
+  const currentPath = pathname + search + hash
+  console.log('currentPath', currentPath)
+  return currentPath
 }
 
 function setBeforeWatchPath (to) {
@@ -316,6 +317,15 @@ function setBeforeWatchPath (to) {
 
 function getBeforeWatchPath () {
   return beforeWatchPath.value = session.get('beforeWatchPath')
+}
+
+function youtubeGo (to) {
+
+  const watchToWatch = to.name === 'watch' && route.name === 'watch'
+
+  return watchToWatch
+    ? replace(to)
+    : push(to)
 }
 
 function go (to) {
@@ -330,12 +340,7 @@ function go (to) {
   }
 
   if (app.history === 'replace') {
-
-    const watchToWatch = to.name === 'watch' && route.name === 'watch'
-
-    return watchToWatch
-      ? replace(to)
-      : push(to)
+    return youtubeGo()
   } else {
     return push(to)
   }
@@ -365,6 +370,9 @@ const opts = reactive({
   ok: false
 })
 
+const config = reactive({
+  dismiss: { redirect: { on: false } }
+})
 
 const props = reactive({
   go,
@@ -372,17 +380,20 @@ const props = reactive({
   opts: opts
 })
 
+const load = ref(() => import('src/components/YmMobile/Dialogs/Search.vue'))
+
 const search = {
-  modelValue: show,
-  id: 'SearchDialog',
+  modelValue: ref(false),
+  id: 'Search',
   router: 'search',
   options: opts,
-  load: () => import('src/components/YmMobile/SearchDialog.vue'),
+  load: load,
   onShow: ({ dialog }) => {
     dialog.$move('bottom')
   },
   props: props,
   plugins: { $move },
+  config
 }
 
 function mountSearch () {
@@ -390,13 +401,17 @@ function mountSearch () {
   // console.log('merging opts', props)
   if (route.name === 'search') {
 
-    show.value = true
+    // search.modelValue.value = true
     extend(search, {
+      modelValue: {
+        value: true
+      },
       config: {
         dismiss: {
           redirect: {
             on: true,
             fn: ({ router }) => {
+              console.log('go back search')
               return history.state.back ? router.back() : go(app.home)
             }
           }
@@ -419,9 +434,12 @@ function mountSearch () {
     // alert('yes')
 
     // alert('aaa')
-    show.value = false
+    // search.modelValue.value = false
     // search.props.test200 = 'haha'
     extend(search, {
+      modelValue: {
+        value: false,
+      },
       config: { dismiss: { redirect: { on: false } } },
       // props: { test200: 'aaaa '}
     })
@@ -465,6 +483,7 @@ const selectOptions = [
   'lalala',
   'blablabla'
 ]
+
 const positionOptions = [
   'left',
   'right',
@@ -486,6 +505,7 @@ const positionOptions = [
         <q-btn flat round dense color="black" icon="sym_s_account_circle" />
       </q-toolbar>
     </q-header>
+    <q-toggle v-model="search.config.dismiss.redirect.on" label="config.dismiss.redirect.on" />
     <q-select v-model="props.test200" :options="selectOptions" label="Select Prop" />
     <q-select v-model="opts.position" :options="positionOptions" label="Select Position" />
 
@@ -493,7 +513,7 @@ const positionOptions = [
     <q-page-container>
       <br />{{ beforeWatchPath }}
 
-      <q-toggle v-model="show" label="show" />
+      <q-toggle v-model="search.modelValue.value" label="show" />
       <!--    <pre>{{ player }}</pre>-->
       <pre>{{ search }}</pre>
 

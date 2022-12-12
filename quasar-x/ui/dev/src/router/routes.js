@@ -84,53 +84,6 @@ const children = pages.map(page => {
     })
   }
 
-  if (page.file === 'XDialogYmDesktop') {
-
-    Object.assign(route, {
-      name: 'x-dialog-youtube-music-desktop',
-      children: [
-        {
-          path: '',
-          name: 'ymd-home',
-          components: {
-            default: () => import('src/components/YmMobile/Home.vue'),
-          },
-          props: {
-            default: {},
-          }
-        },
-        {
-          path: 'watch',
-          name: 'ymd-watch',
-          components: {
-            default: () => import('src/components/YmMobile/Watch.vue'),
-            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
-          },
-          props: {
-            default: {},
-            // player: playerInstance(true)
-          }
-        },
-        {
-          path: 'explore',
-          name: 'ymd-explore',
-          components: {
-            default: () => import('src/components/YmMobile/Explore.vue'),
-          },
-          props: {
-            default: {},
-          }
-        },
-        {
-          path: 'library',
-          name: 'ymd-library',
-          components: {
-            default: () => import('src/components/YmMobile/Library.vue'),
-          },
-        }
-      ]
-    })
-  }
 
   return route
 })

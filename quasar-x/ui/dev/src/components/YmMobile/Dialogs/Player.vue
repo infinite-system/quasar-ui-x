@@ -1,7 +1,7 @@
 <script setup>
-import { watch, ref, reactive, onMounted, toRefs } from "vue";
+import { watch, ref, reactive, onMounted, toRefs, toRaw } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useX, prop, isObject } from "../../../../src/x/utils";
+import { useX, isObject } from "../../../../../src/x/utils";
 import { Platform } from 'quasar'
 import data from 'src/assets/YoutubeItems.json'
 
@@ -21,11 +21,11 @@ const router = useRouter()
 
 const { beforeWatchPath } = toRefs(props)
 
-const dialog = prop(props.dialog)
+const dialog = toRaw(props.dialog)
 const player = reactive(props.player)
-const go = prop(props.go)
-const app = prop(props.app)
-const freezeView = prop(props.freezeView)
+const go = toRaw(props.go)
+const app = toRaw(props.app)
+const freezeView = toRaw(props.freezeView)
 
 const item = ref(null)
 const switchItem = ref(null)
@@ -33,8 +33,8 @@ const playerBox = ref(null)
 
 onMounted(() => {
 
-  watch(() => props.player.view, () => {
-    switch (props.player.view) {
+  watch(() => player.view, () => {
+    switch (player.view) {
       case 'hidden':
 
         playerBox.value.style.cssText = `transition:0.4s; height:0; padding:0; overflow:hidden;`
