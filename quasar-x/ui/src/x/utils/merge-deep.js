@@ -1,8 +1,8 @@
 import { isObject } from './is.js'
 /**
  * Deep merge two objects.
- * @param target
- * @param ...sources
+ * @param target object
+ * @param sources array
  */
 export default function mergeDeep(target, ...sources) {
   if (!sources.length) return target;

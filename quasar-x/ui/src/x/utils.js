@@ -4,7 +4,7 @@ import { extractData, extractQuery } from './utils/extract-data'
 import { isObject, isFunction, isEmpty, isPromise, isAsync, isArray, isString } from './utils/is'
 import keepAlive from './utils/keep-alive'
 import { err, warn, info, log, dbg, logify, stringify } from './utils/log'
-import mergeDeep from './utils/merge-deep'
+import extend from './utils/merge-deep'
 import prop from './utils/prop'
 import size from './utils/size'
 import sleep from './utils/sleep'
@@ -32,7 +32,7 @@ export {
   log,
   logify,
   stringify,
-  mergeDeep,
+  extend,
   prop,
   size,
   sleep,

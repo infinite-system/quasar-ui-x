@@ -27,7 +27,8 @@ module.exports = function (ctx) {
       // 'roboto-font-latin-ext', // this or either 'roboto-font', NEVER both!
 
       'roboto-font', // optional, you are not bound to it
-      'material-icons' // optional, you are not bound to it
+      'material-icons', // optional, you are not bound to it
+      'material-symbols-sharp'
     ],
 
     framework: {
@@ -38,7 +39,7 @@ module.exports = function (ctx) {
 
       // Quasar plugins
       plugins: [
-        'Notify', 'Dialog', 'LocalStorage', 'Cookies'
+        'Notify', 'Dialog', 'SessionStorage', 'LocalStorage', 'Cookies'
       ]
     },
 
@@ -50,7 +51,7 @@ module.exports = function (ctx) {
 
       target: {
 
-        browser: ['es2019', 'edge88', 'firefox78', 'chrome87', 'safari12.1'],
+        browser: ['es2019', 'edge88', 'firefox78', 'chrome87', 'safari13.1'],
         // node: 'node16'
       },
 

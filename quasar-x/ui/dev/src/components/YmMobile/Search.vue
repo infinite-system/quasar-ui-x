@@ -2,5 +2,5 @@
 defineProps(['test'])
 </script>
 <template>
-  <q-page>Watch</q-page>
+  <q-page>Search</q-page>
 </template>

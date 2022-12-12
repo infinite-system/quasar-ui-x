@@ -8,4 +8,6 @@ watch(() => props.dialog, () => {
   emit('mount', props.dialog)
 }, { immediate: true, deep: true })
 </script>
-<template></template>
+<template>
+  <router-view></router-view>
+</template>

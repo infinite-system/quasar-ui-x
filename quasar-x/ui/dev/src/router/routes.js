@@ -1,34 +1,6 @@
 import pages from './pages'
 import XDialog from '../../../src/x/dialog/XDialog.vue'
 
-const playerInstance = function (show) {
-  return to => ({
-    // modelValue: show,
-    id: 'BigPlayer',
-    router: 'watch',
-    options: {
-      position: 'bottom',
-      seamless: true,
-      noRouteDismiss: true,
-      transitionShow: 'jump-up',
-      ok: false
-    },
-    config: {
-      dismiss: {
-        redirect: {
-          fn (route, router) {
-            // if (!window.__isInitialLoad){
-              route.back()
-            // }
-          }
-        }
-      }
-    },
-    load: () => import('../components/BigPlayer.vue'),
-    // props: { fold: !show },
-    data: to.meta?.data ?? {},
-  })
-}
 
 const children = pages.map(page => {
 
@@ -37,7 +9,8 @@ const children = pages.map(page => {
     component: () => import('pages/' + page.file + '.vue')
   }
 
-  if (page.file === 'XDialogYMM') {
+  if (page.file === 'XDialogYmMobile') {
+
     Object.assign(route, {
       name: 'x-dialog-youtube-music-mobile',
       children: [
@@ -45,82 +18,73 @@ const children = pages.map(page => {
           path: '',
           name: 'home',
           components: {
-            default: () => import('../components/Home.vue'),
-            player: () => import('../components/YMXDialogProxyComponent.vue'),
+            default: () => import('src/components/YmMobile/Home.vue'),
+            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
+            search: () => import('src/components/YmMobile/XDialogProxy.vue'),
           },
           props: {
             default: {},
-            player: {
-              dialog: {
-                props: {
-                  // fold:true
-                }
-              }
-            }
+            player: { dialog: {} },
           }
         },
         {
           path: 'watch',
           name: 'watch',
           components: {
-            default: () => import('../components/Watch.vue'),
-            player: () => import('../components/YMXDialogProxyComponent.vue'),
+            default: () => import('src/components/YmMobile/Watch.vue'),
+            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
+            search: () => import('src/components/YmMobile/XDialogProxy.vue'),
           },
           props: {
             default: {},
-            player: {
-              dialog: {
-                options: { position: 'bottom'},
-                props: {
-                  // fold:false
-                }
-              }
-            }
-            // player: playerInstance(true)
+            player: { dialog: {} },
           }
         },
         {
           path: 'explore',
           name: 'explore',
           components: {
-            default: () => import('../components/Explore.vue'),
-            player: () => import('../components/YMXDialogProxyComponent.vue'),
+            default: () => import('src/components/YmMobile/Explore.vue'),
+            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
+            search: () => import('src/components/YmMobile/XDialogProxy.vue'),
           },
           props: {
             default: {},
-            player: {
-              dialog: {
-                // options: { position: 'right'},
-                props: {
-                  // fold:true
-                }
-              }
-            },
+            player: { dialog: {} },
           }
         },
         {
           path: 'library',
           name: 'library',
           components: {
-            default: () => import('../components/Library.vue'),
-            player: () => import('../components/YMXDialogProxyComponent.vue'),
+            default: () => import('src/components/YmMobile/Library.vue'),
+            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
+            search: () => import('src/components/YmMobile/XDialogProxy.vue'),
           },
           props: {
             default: {},
-            player: {
-              dialog: {
-                props: {
-                  // fold:true
-                }
-              }
-            }
+            player: { dialog: {} },
           }
-        }
+        },
+        {
+          path: 'search',
+          name: 'search',
+          components: {
+            default: () => import('src/components/YmMobile/Search.vue'),
+            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
+            search: () => import('src/components/YmMobile/XDialogProxy.vue'),
+          },
+          props: {
+            default: {},
+            player: { dialog: {} },
+            search: { dialog: {} }
+          }
+        },
       ]
     })
   }
 
-  if (page.file === 'XDialogYMD') {
+  if (page.file === 'XDialogYmDesktop') {
 
     Object.assign(route, {
       name: 'x-dialog-youtube-music-desktop',
@@ -129,7 +93,7 @@ const children = pages.map(page => {
           path: '',
           name: 'ymd-home',
           components: {
-            default: () => import('../components/Home.vue'),
+            default: () => import('src/components/YmMobile/Home.vue'),
           },
           props: {
             default: {},
@@ -139,8 +103,8 @@ const children = pages.map(page => {
           path: 'watch',
           name: 'ymd-watch',
           components: {
-            default: () => import('../components/Watch.vue'),
-            player: () => import('../components/YMXDialogProxyComponent.vue'),
+            default: () => import('src/components/YmMobile/Watch.vue'),
+            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
           },
           props: {
             default: {},
@@ -151,7 +115,7 @@ const children = pages.map(page => {
           path: 'explore',
           name: 'ymd-explore',
           components: {
-            default: () => import('../components/Explore.vue'),
+            default: () => import('src/components/YmMobile/Explore.vue'),
           },
           props: {
             default: {},
@@ -161,7 +125,7 @@ const children = pages.map(page => {
           path: 'library',
           name: 'ymd-library',
           components: {
-            default: () => import('../components/Library.vue'),
+            default: () => import('src/components/YmMobile/Library.vue'),
           },
         }
       ]

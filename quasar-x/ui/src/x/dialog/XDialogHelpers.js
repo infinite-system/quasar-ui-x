@@ -1,5 +1,5 @@
 import ResizeSensor from "css-element-queries/src/ResizeSensor";
-import { isObject, log, isFunction, createComponent, extractData, warn, mergeDeep, logify } from '../utils'
+import { isObject, log, isFunction, createComponent, extractData, warn, extend, logify } from '../utils'
 import { h, isRef, markRaw } from 'vue'
 import XDialog from './XDialog.vue'
 
@@ -41,7 +41,7 @@ export function setButtonDefaults (defaults, options, btnDefaults) {
      * to get the functionality of those buttons
      */
     if (btn in options && isObject(options[btn])) {
-      btnOptions[btn] = mergeDeep({}, btnDefaults[btn], options[btn])
+      btnOptions[btn] = extend({}, btnDefaults[btn], options[btn])
       // options[btn] = opts
       if ('name' in options[btn]){
         btnOptions[btn].name = btnDefaults[btn].name
@@ -51,7 +51,7 @@ export function setButtonDefaults (defaults, options, btnDefaults) {
   return btnOptions
 }
 
-export function redirectFn (router, route) {
+export function redirectFn ({ dialog, router, route } = {}) {
 
   const parentIndex = route.matched.length - 2
   const parent = parentIndex in route.matched ? route.matched[parentIndex] : null
@@ -190,7 +190,7 @@ export function xDialog (app) {
     document.body.appendChild(container)
 
     let modelEvents = {}
-    const models = ['modelValue', 'options', 'load', 'props']
+    const models = ['modelValue', 'options', 'load', 'props', 'config']
 
     /* Retain reactivity */
     for (let model of models) {

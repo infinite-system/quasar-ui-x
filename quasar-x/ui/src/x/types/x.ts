@@ -98,7 +98,7 @@ export interface XDialogConfigDismissRedirect {
 export const propsXDialog: PropsWorkaround<XDialogProps> = {
   // main props
   id: { default: '', type: String },
-  modelValue: { default: true, type: Boolean },
+  modelValue: { default: true, type: [Boolean, Object] },
   options: { default: () => ({}), type: [Object, String] },
   load: { default: undefined, type: [Boolean, String, Object, Function] },
   props: { default: () => ({}), type: Object },
@@ -262,7 +262,8 @@ export interface XDialogDOM {
 }
 
 export interface XVueHistory {
-  isInitialLoad: boolean
+  isFirstLoad: boolean
+  direction: 'back' | 'forward' | null
   determineDirection: (event: Event) => string
 }
 

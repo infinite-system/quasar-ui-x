@@ -1,11 +1,13 @@
 <script setup>
 import { computed, onMounted, ref, watch, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useX, isString, byId, mergeDeep } from "../../../src/x/utils";
+import { useX, isString, byId, extend } from "../../../src/x/utils";
+import { $style, $move } from "../../../src/x/dialog/XDialogPlugins.js";
 import { QBtn, useQuasar } from 'quasar'
 import { Platform } from 'quasar'
 import Plyr from 'plyr'
-import data from 'src/assets/YMMItems.json'
+import data from 'src/assets/YoutubeItems.json'
+
 
 const $x = useX()
 const $q = useQuasar()
@@ -17,52 +19,6 @@ const bgRouterView = ref(false)
 
 const routedDialog = computed(() => bgRouterView.value ? router.resolve(bgRouterView.value) : route)
 
-function $style (dialog, name) {
-
-  let i = 1
-
-  function injectStyle (style) {
-    const id = `${dialog.xId()}__style__${i++}`
-    if (!document.getElementById(id)) {
-      const div = document.createElement("div")
-      div.innerHTML = style;
-      const styleElement = div.firstElementChild;
-      styleElement.setAttribute('id', id);
-      document.body.appendChild(styleElement)
-    }
-  }
-
-  return (style) => injectStyle(style)
-}
-
-function $move (dialog) {
-
-  return (position) => {
-
-    if (isString(position)) {
-
-      const dialogs = document.querySelectorAll('div[data-v-app][x-type="XDialog"]')
-
-      switch (position) {
-        case 'bottom':
-          if (dialogs.length) {
-            dialogs[0].parentNode
-              .insertBefore(dialog.xDOM().xComponent(), dialogs[0])
-          }
-          break;
-        case 'top':
-          if (dialogs.length) {
-            dialogs[0].parentNode
-              .insertBefore(dialog.xDOM().xComponent(), dialogs[dialogs.length - 1].nextSibling)
-          }
-          break;
-        case 'html':
-          document.documentElement.insertBefore(dialog.xDOM().xComponent(), document.body.nextSibling)
-          break;
-      }
-    }
-  }
-}
 
 function $player (dialog, name) {
 
@@ -114,7 +70,7 @@ const player = reactive({
 const playerProps = ref({
   id: 'Player',
   options: { position: 'bottom', seamless: true, ok: false },
-  load: () => import('../components/Player'),
+  load: () => import('src/components/YmDesktop/Player.vue'),
   props: { player: player, go },
   onLoad: ({ dialog }) => {
     setInterval(() => {
@@ -159,7 +115,7 @@ const bigPlayerProps = reactive({
       }
     }
   },
-  load: () => import('../components/BigPlayer.vue'),
+  load: () => import('src/components/YmMobile/Player.vue'),
   props: {
     player: player,
     go: go
@@ -180,7 +136,7 @@ let lastViewBeforeWatchPosition = 0
 onMounted(() => {
 
   // https://stackoverflow.com/a/58950454/1502706
-  window.onpopstate = function(event) {
+  addEventListener('popstate', function(event) {
 
     let direction = $x.history.determineDirection(event)
 
@@ -213,7 +169,7 @@ onMounted(() => {
       sessionStorage.setItem('lastNotWatchPath', JSON.stringify(resolvedRoute.fullPath))
     }
     console.log('lastViewBeforeWatchPosition', lastViewBeforeWatchPosition, 'direction', direction)
-  }
+  })
 
   initBigPlayer()
 
@@ -276,7 +232,7 @@ watch(() => player.view, () => {
 })
 
 function mount (props) {
-  mergeDeep(bigPlayerProps, props)
+  extend(bigPlayerProps, props)
 }
 
 function go (to) {
@@ -299,8 +255,8 @@ function go (to) {
   // if (to.name === 'watch' && route.name === 'watch'){
   //   router.replace(to)
   // } else {
-    player.setItem = true
-    router.push(to)
+  player.setItem = true
+  router.push(to)
   // }
 }
 
@@ -316,7 +272,6 @@ function go (to) {
     </div>
 
     <pre>{{ player }}</pre>
-
 
     <div v-for="item in data.items" class="row q-pa-sm" @click="go({ name: 'watch', query: { id: item.id } })">
       <div>
