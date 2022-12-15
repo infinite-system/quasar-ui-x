@@ -1,4 +1,4 @@
-import { PropType, ComponentPublicInstance, ComponentOptions, Component, ComputedOptions, MethodOptions } from "vue";
+import { PropType, ComponentPublicInstance, ComponentOptions, Component, ComputedOptions, MethodOptions, Ref } from "vue";
 import {
   QBtn,
   QDialogOptions
@@ -32,16 +32,18 @@ type PropsWorkaround<T> = {
   [Key in keyof T]-?: PropOptionsWorkaroundRequired<T[Key]> & OptionalRequired<T[Key]>
 }
 
-export interface XDialogProps  {
+export interface XDialogProps {
   id?: string
-  modelValue?: boolean
+  modelValue?: boolean | Ref
   options?: QDialogOptions | string
-  load?: boolean | string | object
+  load?: boolean | string | object | Promise<any>
   props?: object
   btn?: string | object
   btnProps?: object
   router?: boolean | string | object
   plugins?: XDialogPlugins
+  config?: XDialogConfig
+  debug?: boolean | Array<string>
   onCreate?: XDialogDisplaySetup | XDialogDisplayFn | object
   onToggle?: XDialogDisplaySetup | XDialogToggleFn | object
   onShow?: XDialogDisplaySetup | XDialogDisplayFn | object
@@ -56,15 +58,13 @@ export interface XDialogProps  {
   onDestroy?: XDialogDisplaySetup | XDialogDisplayFn | object
   onOk?: XDialogPromptSetup | XDialogPromptFn | object
   onCancel?: XDialogPromptSetup | XDialogPromptFn | object
-  config?: XDialogConfig
-  debug?: boolean | Array<string>
 }
 
 export interface XDialogConfig {
-  load: XDialogConfigLoad
-  payload: XDialogConfigPayload
-  dismiss: XDialogConfigDismiss
-  router: XDialogConfigRouter
+  load?: XDialogConfigLoad
+  payload?: XDialogConfigPayload
+  dismiss?: XDialogConfigDismiss
+  router?: XDialogConfigRouter
 }
 
 export interface XDialogConfigLoad {
@@ -81,18 +81,24 @@ export interface XDialogConfigDismiss {
 }
 
 export interface XDialogConfigPayload {
-  on: boolean
-  fn: (payload: any) => void | false
+  on?: boolean
+  fn?: (payload: any) => void | false
 }
 
 export interface XDialogConfigRouter {
-  restart: boolean
-  emit: boolean
+  restart?: boolean
+  emit?: boolean
 }
 
 export interface XDialogConfigDismissRedirect {
-  on: boolean
-  fn: (route: object, router: object) => void
+  on?: boolean
+  fn?: (config: XDialogConfigDismissRedirectFnArgs) => void
+}
+
+export interface XDialogConfigDismissRedirectFnArgs {
+  dialog?: XDialog,
+  route?: object,
+  router?: object
 }
 
 export const propsXDialog: PropsWorkaround<XDialogProps> = {
@@ -107,21 +113,6 @@ export const propsXDialog: PropsWorkaround<XDialogProps> = {
   btnProps: { default: () => ({}), type: Object },
   router: { default: false, type: [Boolean, String, Object] },
   plugins: { default: [], type: Object },
-  // events
-  onCreate: { default: null, type: [Function, Object] },
-  onToggle: { default: null, type: [Function, Object] },
-  onShow: { default: null, type: [Function, Object] },
-  onLoad: { default: null, type: [Function, Object] },
-  onMount: { default: null, type: [Function, Object] },
-  onHide: { default: null, type: [Function, Object] },
-  onOk: { default: null, type: [Function, Object] },
-  onCancel: { default: null, type: [Function, Object] },
-  onUpdate: { default: null, type: [Function, Object] },
-  onProps: { default: null, type: [Function, Object] },
-  onFail: { default: null, type: [Function, Object] },
-  onConfig: { default: null, type: [Function, Object] },
-  onPlugins: { default: null, type: [Function, Object] },
-  onDestroy: { default: null, type: [Function, Object] },
   config: {
     default: () => ({
       load: {
@@ -149,7 +140,23 @@ export const propsXDialog: PropsWorkaround<XDialogProps> = {
     }),
     type: Object
   },
-  debug: { default: false, type: [Boolean, Object] }
+  debug: { default: false, type: [Boolean, Object] },
+
+  // events
+  onCreate: { default: null, type: [Function, Object] },
+  onToggle: { default: null, type: [Function, Object] },
+  onShow: { default: null, type: [Function, Object] },
+  onLoad: { default: null, type: [Function, Object] },
+  onMount: { default: null, type: [Function, Object] },
+  onHide: { default: null, type: [Function, Object] },
+  onOk: { default: null, type: [Function, Object] },
+  onCancel: { default: null, type: [Function, Object] },
+  onUpdate: { default: null, type: [Function, Object] },
+  onProps: { default: null, type: [Function, Object] },
+  onFail: { default: null, type: [Function, Object] },
+  onConfig: { default: null, type: [Function, Object] },
+  onPlugins: { default: null, type: [Function, Object] },
+  onDestroy: { default: null, type: [Function, Object] }
 }
 
 export interface XDialogComponentProps {
@@ -178,16 +185,16 @@ export interface XDialogConfigFnArgs extends XDialogDisplayFnArgs {
   config: object
 }
 
-export declare type XDialogDisplayFn<T = any> = (args: XDialogDisplayFnArgs) => void | boolean
-export declare type XDialogToggleFn = (args: XDialogToggleFnArgs) => void | boolean
-export declare type XDialogConfigFn = (args: XDialogConfigFnArgs) => void | boolean
+export declare type XDialogDisplayFn<T = any> = (args?: XDialogDisplayFnArgs) => void | boolean
+export declare type XDialogToggleFn = (args?: XDialogToggleFnArgs) => void | boolean
+export declare type XDialogConfigFn = (args?: XDialogConfigFnArgs) => void | boolean
 
 export interface XDialogPromptSetup {
   fn?: XDialogPromptFn
   reset?: boolean
 }
 
-declare type XDialogPromptFn = (args:XDialogPayloadFnArgs) => void | boolean
+declare type XDialogPromptFn = (args?: XDialogPayloadFnArgs) => void | boolean
 
 export interface XDialogDisplaySetup {
   fn?: XDialogDisplayFn | XDialogToggleFn
@@ -220,7 +227,7 @@ export interface XDialogChain {
   loadAsync: () => XDialogChain
   props: (props: object, options: object) => XDialogChain
   plugins: (plugins: [XDialogPlugins]) => XDialogChain
-  config?: (config: XDialogConfig) => void
+  config?: (config: XDialogConfig) => XDialogChain
   destroy: () => void
   // events
   onCreate: (setup: XDialogDisplaySetup | XDialogDisplayFn) => XDialogChain
@@ -250,7 +257,7 @@ export interface XDialogState {
 }
 
 export interface XDialogPlugins {
-  key: (dialog: XDialog, name: string) => void
+  [key: string]: (dialog: XDialog, name: string) => void | object
 }
 
 export interface XDialogDOM {

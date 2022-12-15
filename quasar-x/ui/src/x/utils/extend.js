@@ -4,7 +4,7 @@ import { isObject } from './is.js'
  * @param target object
  * @param sources array
  */
-export default function mergeDeep(target, ...sources) {
+export default function extend(target, ...sources) {
   if (!sources.length) return target;
 
   const source = sources.shift();
@@ -13,12 +13,12 @@ export default function mergeDeep(target, ...sources) {
     for (const key in source) {
       if (isObject(source[key])) {
         if (!target[key]) Object.assign(target, { [key]: {} });
-        mergeDeep(target[key], source[key]);
+        extend(target[key], source[key]);
       } else {
         Object.assign(target, { [key]: source[key] });
       }
     }
   }
 
-  return mergeDeep(target, ...sources);
+  return extend(target, ...sources);
 }

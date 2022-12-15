@@ -25,23 +25,31 @@ const defaultConfig = propsXDialog.config.default();
 const fullConfig = reactive(p.config)
 extend(fullConfig, extend({}, defaultConfig, p.config))
 
-let debugAll = toRaw(p.debug)
+let debug = toRaw(p.debug)
 let debugSpecific = {}
 if (isArray(p.debug)) {
   p.debug.forEach(type => debugSpecific[type] = 1)
-  debugAll = false
 }
 
-function log (type, ...args) {
-  if (isObject(type)) {
-    for (const fnName in type) {
-      args.unshift(type)
-      type = fnName
+function log (fn) {
+
+  if (debug) {
+
+    const args = fn()
+    let logType = ''
+
+    for (const fnName in args) {
+      logType = fnName;
       break;
     }
-  }
-  if (debugAll || typeof debugSpecific[type] !== 'undefined') {
-    dbg('XDialog', type, ...args)
+
+    if (isArray(debug) && typeof debugSpecific[logType] === 'undefined') {
+      for (let i in args) delete args[i]
+      return void 0
+    } else {
+      console.log('yooo', debug)
+      return dbg('XDialog', logType, args)
+    }
   }
 }
 
@@ -236,7 +244,7 @@ const XDialog = {
       i++ && await sleep(interval)
     }
 
-    log({ showAsync: XDialog.showAsync, await: parseInt(i * interval) })
+    log(() => ({ showAsync: XDialog.showAsync, await: parseInt(i * interval) }))
   },
 
   onShow (setup) {
@@ -256,7 +264,7 @@ const XDialog = {
       i++ && await sleep(interval)
     }
 
-    log({ hideAsync: XDialog.hideAsync, await: parseInt(i * interval) })
+    log(() => ({ hideAsync: XDialog.hideAsync, await: parseInt(i * interval) }))
   },
 
   onHide (setup) {
@@ -305,7 +313,7 @@ const XDialog = {
       i++ && await sleep(interval)
     }
 
-    log({ loadAsync: XDialog.loadAsync, await: i * interval })
+    log(() => ({ loadAsync: XDialog.loadAsync, await: i * interval }))
   },
 
   onLoad (setup) {
@@ -413,7 +421,7 @@ function load (component) {
 
   isLoading.value = true
 
-  log({ load, loadProp: p.load, propIsRef: isRef(p.load), component: component })
+  log(() => ({ load, loadProp: p.load, propIsRef: isRef(p.load), component: component }))
 
   emit('update:load', component)
 
@@ -491,7 +499,7 @@ function dismiss () {
 
 function update (options) {
 
-  log({ update, options })
+  log(() => ({ update, options }))
 
   prepareOptions(dialogOptions, defaults, options)
 
@@ -659,7 +667,7 @@ function getPayload (payloadFn) {
 
   const payload = payloadFn(XDialog.xDOM().xInner())
 
-  log({ getPayload, payload })
+  log(() => ({ getPayload, payload }))
 
   return payload
 }
@@ -677,7 +685,7 @@ function okCancel (type, event = null) {
         ? callback.payloadFn
         : defaultPayloadFn
 
-    log({ okCancel, payloadFn: payloadFn, payloadConfig: fullConfig.payload })
+    log(() => ({ okCancel, payloadFn: payloadFn, payloadConfig: fullConfig.payload }))
 
     payload = getPayload(payloadFn)
 
@@ -760,6 +768,7 @@ function componentChanged (newA, prevA) {
    * note both [localComponent, localShow] are necessary for
    * the correct operation of the next line:
    */
+  log(() => ({ componentChanged, compare: newA?.toString() + '===' + prevA?.toString() }))
   return newA?.toString() !== prevA?.toString()
 }
 
@@ -783,6 +792,7 @@ watch(component, () => localComponent.value = component.value, { immediate: true
 // Smart load component change
 function loadChange (newA, prevA) {
   // change component only if shown & changed to save on memory and rendering
+  log(() => ({ loadChange, compare: newA?.toString() + '===' + prevA?.toString() }))
   if (localShow.value && validComponent && componentChanged(newA, prevA)) {
     loadComponent.value = localComponent.value
   }
@@ -857,7 +867,7 @@ async function watchLoad () {
 
     try {
 
-      log({ watchLoad, component: loadComponent.value, loadConfig: fullConfig.load })
+      log(() => ({ watchLoad, component: loadComponent.value, loadConfig: fullConfig.load }))
 
       // this reassignment is necessary loadFile.value is used later in
       // watch(isHiding, preventOnLoad) to cancel import if dialog is dismissed

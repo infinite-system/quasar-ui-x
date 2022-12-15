@@ -2,9 +2,10 @@
 import { watch, ref, reactive, onMounted, toRefs, toRaw } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useX, isObject } from "../../../../../src/x/utils";
-import { Platform } from 'quasar'
+import { Platform, useQuasar } from 'quasar'
 import data from 'src/assets/YoutubeItems.json'
 
+const $q = useQuasar()
 const $x = useX()
 
 const props = defineProps({
@@ -27,7 +28,6 @@ const go = toRaw(props.go)
 const app = toRaw(props.app)
 const freezeView = toRaw(props.freezeView)
 
-const item = ref(null)
 const switchItem = ref(null)
 const playerBox = ref(null)
 
@@ -36,7 +36,6 @@ onMounted(() => {
   watch(() => player.view, () => {
     switch (player.view) {
       case 'hidden':
-
         playerBox.value.style.cssText = `transition:0.4s; height:0; padding:0; overflow:hidden;`
         // dialog.update({ maximized: false })
 
@@ -64,14 +63,9 @@ onMounted(() => {
 
 })
 
-
-// watch(() => player.setItem, () => {
-//     console.log('$x.history.isFirstLoad', $x.history.isFirstLoad, 'player.setItem', player.setItem)
-// }, { immediate: true })
 function doSwitchItem () {
   player.item = switchItem.value
-  console.log('player.item', player.item)
-  switchItem.value = false
+  switchItem.value = null
 }
 
 let playerBoxHeight = null
@@ -99,12 +93,9 @@ function userHasPanned ({ evt, ...pan }) {
 }
 
 function noItem () {
-
   player.item = null
-
   if (history.state.back) router.back()
   else go(app.home)
-
 }
 
 function getItem (watchId) {
@@ -186,14 +177,12 @@ watch(() => route.query.id, () => {
   player.setItem = false
 
 }, { immediate: true })
-
-
 </script>
 <template>
   <div ref="playerBox" v-touch-pan.up.down.mouse.prevent="userHasPanned">
     <q-slider
       v-show="!isDragging && player.view === 'folded'"
-      color="black"
+      :color="$q.dark.isActive ? 'white': 'grey-10'"
       class="player"
       v-model="player.position"
       thumb-size="10px"
@@ -224,7 +213,6 @@ watch(() => route.query.id, () => {
           </template>
         </q-banner>
       </div>
-
 
       <div v-if="isObject(player.item)">
         <div class="row q-pa-sm no-wrap" style="max-width:100wh !important;">

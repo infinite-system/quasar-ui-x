@@ -17,7 +17,7 @@ function install (app, options) {
 
   ListenerTracker.init()
 
-  if (options && 'XDialog' in options){
+  if (options && 'XDialog' in options) {
     XDialog.props.config.default = () => options.XDialog
   }
 
@@ -25,14 +25,15 @@ function install (app, options) {
   app.component(XDialogComponent.name, XDialogComponent)
   app.component(XDialogLoading.name, XDialogLoading)
   app.component(XDialogError.name, XDialogError)
+
   app.component(XDialogLink.name, XDialogLink)
   app.component(XLink.name, XLink)
 
   extendHistory()
 
   const provideX = {
-    dialog : xDialog(app),
-    history : xHistory
+    dialog: xDialog(app),
+    history: xHistory
   }
 
   app.provide('$x', provideX)

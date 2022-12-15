@@ -1,7 +1,7 @@
 import { defineAsyncComponent, defineComponent, h, markRaw } from "vue";
 import { isFunction, isObject, isPromise, isString } from './is.js'
 import { err } from './log.js'
-import toText from "./to-text";
+import { toText } from "./strings";
 
 export function customAsyncComponent (component) {
 

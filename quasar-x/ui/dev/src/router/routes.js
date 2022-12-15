@@ -1,6 +1,4 @@
 import pages from './pages'
-import XDialog from '../../../src/x/dialog/XDialog.vue'
-
 
 const children = pages.map(page => {
 
@@ -11,20 +9,27 @@ const children = pages.map(page => {
 
   if (page.file === 'XDialogYmMobile') {
 
+    const XDialogProxy = () => import('src/components/YmMobile/XDialogProxy.vue')
+
+    const DialogProxies = {
+      menu: XDialogProxy,
+      player: XDialogProxy,
+      search: XDialogProxy,
+      account: XDialogProxy,
+    }
+
     Object.assign(route, {
-      name: 'x-dialog-youtube-music-mobile',
+      name: 'x-dialog-ym-mobile',
       children: [
         {
           path: '',
           name: 'home',
           components: {
             default: () => import('src/components/YmMobile/Home.vue'),
-            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
-            search: () => import('src/components/YmMobile/XDialogProxy.vue'),
+            ...DialogProxies
           },
           props: {
             default: {},
-            player: { dialog: {} },
           }
         },
         {
@@ -32,12 +37,10 @@ const children = pages.map(page => {
           name: 'watch',
           components: {
             default: () => import('src/components/YmMobile/Watch.vue'),
-            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
-            search: () => import('src/components/YmMobile/XDialogProxy.vue'),
+            ...DialogProxies
           },
           props: {
             default: {},
-            player: { dialog: {} },
           }
         },
         {
@@ -45,12 +48,10 @@ const children = pages.map(page => {
           name: 'explore',
           components: {
             default: () => import('src/components/YmMobile/Explore.vue'),
-            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
-            search: () => import('src/components/YmMobile/XDialogProxy.vue'),
+            ...DialogProxies
           },
           props: {
             default: {},
-            player: { dialog: {} },
           }
         },
         {
@@ -58,12 +59,10 @@ const children = pages.map(page => {
           name: 'library',
           components: {
             default: () => import('src/components/YmMobile/Library.vue'),
-            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
-            search: () => import('src/components/YmMobile/XDialogProxy.vue'),
+            ...DialogProxies
           },
           props: {
             default: {},
-            player: { dialog: {} },
           }
         },
         {
@@ -71,13 +70,21 @@ const children = pages.map(page => {
           name: 'search',
           components: {
             default: () => import('src/components/YmMobile/Search.vue'),
-            player: () => import('src/components/YmMobile/XDialogProxy.vue'),
-            search: () => import('src/components/YmMobile/XDialogProxy.vue'),
+            ...DialogProxies
           },
           props: {
             default: {},
-            player: { dialog: {} },
-            search: { dialog: {} }
+          }
+        },
+        {
+          path: 'account/:part*',
+          name: 'account',
+          components: {
+            default: () => import('src/components/YmMobile/Account.vue'),
+            ...DialogProxies
+          },
+          props: {
+            default: {},
           }
         },
       ]

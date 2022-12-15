@@ -1,6 +1,6 @@
 import { isString } from "../utils/is.js";
 
-export function $style (dialog, name) {
+export function XDialogPluginStyle (dialog, name) {
 
   let i = 1
 
@@ -18,7 +18,7 @@ export function $style (dialog, name) {
   return (style) => injectStyle(style)
 }
 
-export function $move (dialog) {
+export function XDialogPluginMove (dialog) {
 
   return (position) => {
 

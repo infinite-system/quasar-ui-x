@@ -63,6 +63,7 @@ module.exports = function (ctx) {
       chainWebpack(chain) {
         chain.resolve.alias.merge({
           '@': path.resolve(__dirname, `src`),
+          '#': path.resolve(__dirname, `../src`),
           ui: path.resolve(__dirname, `../src/index.esm.js`)
         })
 
