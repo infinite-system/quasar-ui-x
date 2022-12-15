@@ -47,7 +47,6 @@ function log (fn) {
       for (let i in args) delete args[i]
       return void 0
     } else {
-      console.log('yooo', debug)
       return dbg('XDialog', logType, args)
     }
   }
