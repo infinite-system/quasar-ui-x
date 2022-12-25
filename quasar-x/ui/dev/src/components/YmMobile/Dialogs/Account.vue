@@ -1,6 +1,6 @@
 <template>
   <div class="row q-py-md">
-    <div style="margin-top:-6px">
+    <div class="adjust-back-arrow">
       <q-btn @click="dialog.hide()" flat round icon="sym_s_arrow_back" size="md" class="q-mx-sm" />
     </div>
 
@@ -22,17 +22,12 @@
 <script setup>
 import EssentialLink from '../../EssentialLink.vue'
 import { toRefs, ref, computed, reactive, toRaw } from 'vue'
-import extend from '#/x/utils/extend'
 
-function handleClick(evt, go){
-  //g
-}
 const props = defineProps({
   dialog: { default: () => ({}), type: Object },
   player: { default: () => ({}), type: Object },
   opts: { default: () => ({}), type: Object },
   go: { default: () => () => {}, type: Function },
-  // onMount: { default: () => () => {}, type: Function }
 })
 
 defineEmits(['mount'])

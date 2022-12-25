@@ -1,6 +1,6 @@
 import ResizeSensor from "css-element-queries/src/ResizeSensor";
 import { isObject, log, isFunction, createComponent, extractData, warn, extend, logify } from '../utils'
-import { h, isRef, markRaw } from 'vue'
+import { h, isReactive, isRef, markRaw } from 'vue'
 import XDialog from './XDialog.vue'
 
 let uniqueDialogId = 1
@@ -184,19 +184,22 @@ export function fix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow (loa
 
 export function xDialog (app) {
 
-  return (props, listeners) => {
+  return (props) => {
 
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    let modelEvents = {}
     const models = ['modelValue', 'options', 'load', 'props', 'config']
 
     /* Retain reactivity */
     for (let model of models) {
-      modelEvents[`onUpdate:${model}`] = function(modelValue) {
-        if (model in props && isRef(props[model])) {
-          props[model].value = modelValue
+      props[`onUpdate:${model}`] = function(modelValue) {
+        if (model in props){
+          if (isRef(props[model])) { // handle ref
+            props[model].value = modelValue
+          } else { // handle reactive
+            props[model] = modelValue
+          }
         }
       }
     }
@@ -208,10 +211,10 @@ export function xDialog (app) {
     }
 
     return createComponent({
-      el: container,
-      component: h(XDialog, { ...modelEvents, ...listeners }),
+      app,
+      component: XDialog,
       props: props,
-      appContext: app._context,
+      el: container,
     })
   }
 }

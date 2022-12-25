@@ -1,6 +1,6 @@
 <script lang="ts">export default { name: 'XDialog', inheritAttrs: false }</script>
 <script setup lang="ts">
-import { ref, watch, computed, toRefs, defineProps, onBeforeUnmount, useSlots, isRef, shallowRef, reactive, toRaw } from 'vue'
+import { ref, watch, computed, toRefs, defineProps, onBeforeUnmount, useSlots, isRef, shallowRef, reactive, toRaw, onMounted, onUpdated, onRenderTriggered, onRenderTracked } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { dbg, warn, extend, byId, onFrame, isFunction, isObject, sleep, isArray } from '../utils.js'
@@ -63,8 +63,13 @@ async function destroy () {
     await XDialog.hideAsync()
     XDialog.config({ dismiss: { redirect: { on: true } } })
     remove(id)
+    // if created dynamically using createComponent()
+    // we get an extra function to completely unmount
+    // the component from javascript
   }
+
   runDisplayCallbacks('destroy')
+  console.log('destroy', id)
 }
 
 // onBeforeUnmount MUST always be before the watch functions
@@ -83,7 +88,7 @@ const slots = useSlots()
 const localShow = ref(modelValue.value)
 const localOptions = ref(options.value)
 const localComponent = shallowRef(component.value)
-const localComponentProps = ref(componentProps.value)
+const localComponentProps = shallowRef(componentProps.value)
 
 const loadingComponent = shallowRef(null)
 const loadingComponentProps = shallowRef({})
@@ -104,7 +109,7 @@ const id = p.id || 'XDialog_' + dialogId()
 const loadId = `${id}__load`
 
 const defaultClass = computed(() => component.value ? 'x-dialog x-dialog-load' : 'x-dialog')
-const defaultInnerClass = computed(() => component.value ? 'x-dialog-plugin x-dialog-plugin-load' : 'x-dialog-plugin')
+const defaultContentClass = 'x-dialog-content'
 
 const defaults = {
   message: wrap(id),
@@ -147,7 +152,7 @@ function prepareOptions (dialogOptions, defaults, options) {
     dialogOptions.message = options.message + wrap(id, '')
   }
 
-  dialogOptions.class = defaultInnerClass.value + ' ' + ('class' in options ? options.class : '')
+  dialogOptions.class = defaultContentClass + ' ' + ('class' in options ? options.class : '')
   dialogOptions.html = true
 
   return dialogOptions
@@ -207,7 +212,7 @@ function init () {
   if (p.onCancel) setPromptCallbacks('cancel', p.onCancel)
 }
 
-const XDialog = {
+let XDialog = {
 
   onCreate (setup) {
     setDisplayCallbacks('create', setup)
@@ -346,6 +351,11 @@ const XDialog = {
     return this
   },
 
+  onFail (setup) {
+    runDisplayCallbacks('fail', setup)
+    return this
+  },
+
   destroy,
 
   onDestroy (setup) {
@@ -358,17 +368,15 @@ const XDialog = {
   xOptions: () => localOptions.value,
   xLoad: () => resolvedImport.value,
   xProps: () => localComponentProps.value,
-  xState () {
-    return {
-      isShowing: () => isShowing.value,
-      isShown: () => isShown.value,
-      isHiding: () => isHiding.value,
-      isLoading: () => isLoading.value,
-      isLoaded: () => isLoaded.value,
-      isMounted: () => isMounted.value,
-      isFailed: () => isFailed.value
-    }
-  },
+  xState: reactive({
+    isShowing: isShowing,
+    isShown: isShown,
+    isHiding: isHiding,
+    isLoading: isLoading,
+    isLoaded: isLoaded,
+    isMounted: isMounted,
+    isFailed: isFailed
+  }),
   xDOM () {
     return {
       xComponent: () => byId(loadId)?.closest('[data-v-app]'),
@@ -428,14 +436,16 @@ function load (component) {
   return XDialog
 }
 
-function setProps (props, config = { update: true }) {
+function setProps (props, config = { reset: false }) {
 
-  if (!config.update) {
+  if (config.reset) {
     for (const prop in localComponentProps.value) {
       delete localComponentProps.value[prop]
     }
   }
   extend(localComponentProps.value, props)
+
+  log(() => ({ setProps, allProps: localComponentProps.value, props: props }))
 
   emit('update:props', localComponentProps.value)
 
@@ -470,7 +480,9 @@ function dismissRedirect () {
 
 async function setClasses (options) {
 
-  if (isShowing.value) await XDialog.showAsync({ justAwait: true })
+  if (isShowing.value) {
+    await XDialog.showAsync()
+  }
 
   if (isShown.value) {
 
@@ -900,6 +912,7 @@ function emitMount (...args) {
   isMounted.value = true
   runDisplayCallbacks('mount', { ...callbackParams }, ...args)
 }
+
 
 defineExpose(XDialog)
 </script>

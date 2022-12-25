@@ -1,16 +1,19 @@
 <script setup>
-import { computed, onMounted, ref, watch, reactive, onBeforeUnmount } from "vue";
+import { computed, onMounted, ref, watch, reactive, onBeforeUnmount, markRaw, isRef, nextTick, getCurrentInstance } from "vue";
+import VueDd from 'src/components/vue-dd/VueDd.vue'
+
 import { useRoute, useRouter } from "vue-router";
-import { useX, extend } from "#/x/utils";
-import {
-  XDialogPluginStyle as $style,
-  XDialogPluginMove as $move
-} from "#/x/dialog/XDialogPlugins";
+import { useX, extend, isArray, onFrame, storage, session } from "#/x/utils";
+
+import { XDialogPluginStyle as $style, XDialogPluginMove as $move, XDialogPluginWide as $wide } from "#/x/dialog/XDialogPlugins";
+import { XDialogPluginMenu as $menu, XDialogPluginPlayer as $player } from "src/components/YmMobile/XDialogExtended/XDialogPlugins";
+
 import { QBtn, useQuasar } from 'quasar'
 import Plyr from 'plyr'
 import data from 'src/assets/YoutubeItems.json'
-import { kebabToPascalCase } from "../../../src/x/utils/strings.js";
-import { isArray } from "../../../src/x/utils.js";
+import { kebabToPascalCase } from "#/x/utils/strings";
+
+import onChange from 'on-change'
 
 const $x = useX()
 const $q = useQuasar()
@@ -28,80 +31,10 @@ onBeforeUnmount(() => {
   Settings?.destroy()
 })
 
-const bgRouterView = ref(null)
-const routedDialog = computed(() => bgRouterView.value ? resolve(bgRouterView.value) : route)
-
-function $wide ({ $style = '$style' } = {}) {
-
-  return (dialog, name) => {
-    dialog[$style](`<style>
-      .x-dialog.wide .x-dialog-plugin-load {
-        border-radius: 0;
-        width: 100vw !important;
-      }
-
-      .x-dialog.wide .q-dialog__inner--minimized {
-        padding:0;
-      }
-
-     .x-dialog.wide .q-dialog__inner--minimized > div {
-       max-width: 100vw !important;
-       width: 100vw !important;
-       max-height: 100vh !important;
-     }
-    </style>`)
-
-    dialog.update({
-      class: `${dialog.xClass()} wide`,
-    });
-  }
-}
-
-function $player ({ $style = '$style' } = {}) {
-
-  return (dialog, name) => {
-
-    dialog[$style](`<style>
-      .x-dialog.player .x-dialog-plugin-load {
-        -webkit-box-shadow: 0 0 4px -1px rgba(0,0,0,0.33);
-        box-shadow: 0 0 4px -1px rgba(0,0,0,0.33);
-      }
-
-      .x-dialog.player .x-dialog-plugin-load {
-        overflow: inherit; /* makes knob visible on folded player */
-      }
-    </style>`)
-
-    dialog.update({
-      class: `${dialog.xClass()} player`,
-    });
-
-  }
-}
-
-const storage = {
-  get: (key) => {
-    try {
-      return JSON.parse(localStorage.getItem(key));
-    } catch (e) {}
-  },
-  set: (key, value) => localStorage.setItem(key, JSON.stringify(value))
-}
-
-const session = {
-  get: (key) => {
-    try {
-      return JSON.parse(sessionStorage.getItem(key));
-    } catch (e) {}
-  },
-  set: (key, value) => sessionStorage.setItem(key, JSON.stringify(value))
-}
-
-const app = {
-  history: 'push', // 'replace' | 'push'
-  home: { name: 'home' },
-  dialogViews: ['watch', 'search', 'user', 'account', 'settings', 'switch']
-}
+// app.dialog.player?.destroy()
+// app.dialog.menu?.destroy()
+// app.dialog.search?.destroy()
+// app.dialog.account?.destroy()
 
 const player = reactive({
   position: 0,
@@ -110,70 +43,360 @@ const player = reactive({
   setItem: false
 })
 
-const menu = {
-  id: 'Menu',
-  options: {
-    position: 'bottom',
-    seamless: true,
-    ok: false
-  },
-  load: () => import('../components/YmMobile/Dialogs/Menu.vue'),
-  props: { player, go },
-  onLoad: () => {
-    setInterval(() => {
-      player.position += 1
-      if (player.position >= 500) {
-        player.position = 0
-      }
-    }, 250)
-  },
-  plugins: {
-    $style,
-    $wide: $wide(),
-  },
-}
 
-const beforeWatchPath = ref('')
-const playerDialog = {
-  id: 'Player',
-  router: 'watch',
-  debug: false,
-  options: {
-    position: 'bottom',
-    seamless: true,
-    noRouteDismiss: true,
-    transitionShow: 'jump-up',
-    ok: false
-  },
-  onHide: () => {
-    player.view = 'hidden'
-  },
+let app = {
   config: {
-    dismiss: {
-      redirect: {
-        on: false
+    history: 'push', // 'replace' | 'push'
+    home: { name: 'home' },
+    dialogViews: ['watch', 'search', 'user', 'account'],
+  },
+  player,
+  view: {
+    state: ref(null),
+    routerState: computed(() => app.view.state.value ? resolve(app.view.state.value) : route),
+    isFrozen: false,
+    beforeWatch: ref(''),
+    freeze (value) {
+
+      // more info on this implementation
+      // https://github.com/vuejs/vue-router/issues/703
+      // https://github.com/vuejs/rfcs/blob/master/active-rfcs/0036-router-view-route-prop.md
+      // https://github.com/vuejs/vue-router/issues/703#issuecomment-428123334
+      if (!this.isFrozen) {
+
+        // save router-view state, make it static
+        // it won't change with router change now
+        app.view.state.value = value || route.fullPath
+        this.isFrozen = true
+      }
+    },
+    unfreeze () {
+
+      if (this.isFrozen) {
+        // unfreeze router-view to be able to set it
+        // from the router navigation
+        app.view.state.value = null
+        this.isFrozen = false
       }
     }
-  },
-  load: import('src/components/YmMobile/Dialogs/Player.vue'),
-  props: {
-    app,
-    player,
-    beforeWatchPath,
-    freezeView,
-    go,
-  },
-  plugins: {
-    $style,
-    $wide: $wide(),
-    $player: $player()
   }
 }
 
+let test = {}
+
+// localStorage = onChange(localStorage, () => {
+//   console.log('app---', test)
+// })
+// test.test = 1
+// console.log('test', test)
+
+// const ls = reactive({
+//   ls: localStorage
+// });
+
+const options = reactive({
+  maximized: false,
+  fullWidth: true,
+  fullHeight: true,
+  position: 'right',
+  seamless: true,
+  ok: false
+})
+
+const props = reactive({
+  go,
+  reactiveProp: 'lalala',
+  options: options
+})
+
+const config = reactive({
+  dismiss: { redirect: { on: false } }
+})
+
+const __tracker__ = reactive({ i: 0 })
+// app.__tracker__ = reactive({i: 0})
+// Object.defineProperty(app, "__tracker__", {
+//   enumerable: false,
+//   writable: true,
+//   // value: reactive({ i: 0 })
+// });
+// app['--vue--dd--tracker--'] = reactive({i: 0})
+// setInterval(() => {
+//   app['--vue--dd--tracker--'].i++
+  // player.position += 1
+// }, 17)
+// app.__tracker__ = reactive({i: 0})
+const dialog = {
+  menu: {
+    mount: () => {
+      if (!app.dialog.menu.instance) {
+        app.dialog.menu.instance = $x.dialog(app.dialog.menu.props)
+      }
+    },
+    props: {
+      id: 'Menu',
+      options: {
+        position: 'bottom',
+        seamless: true,
+        ok: false
+      },
+      load: () => import('../components/YmMobile/Dialogs/Menu.vue'),
+      props: { player, go, app },
+      onLoad: () => {
+        // setInterval(() => {
+        // app.__tracker__.i++
+        player.position += 1
+        // app.__tracker__.scrollY = window.scrollY
+        // // window.scrollY
+        if (player.position >= 500) {
+          player.position = 0
+        }
+        // }, 500)
+      },
+      plugins: {
+        $style,
+        $wide: $wide(),
+        $menu: $menu()
+      }
+    },
+    instance: null
+  },
+  player: {
+    mount (props) {
+      if (!app.dialog.player.instance) {
+        app.dialog.player.instance = $x.dialog(app.dialog.player.props)
+      }
+    },
+    props: {
+      id: 'Player',
+      router: 'watch',
+      debug: false,
+      options: {
+        position: 'bottom',
+        seamless: true,
+        noRouteDismiss: true,
+        transitionShow: 'jump-up',
+        ok: false
+      },
+      onHide: () => {
+        player.view = 'hidden'
+      },
+      config: { dismiss: { redirect: { on: false } } },
+      load: import('src/components/YmMobile/Dialogs/Player.vue'),
+      props: {
+        app,
+        player,
+        go,
+      },
+      plugins: {
+        $style,
+        $wide: $wide(),
+        $player: $player()
+      }
+    },
+    instance: null
+  },
+  search: {
+    mount: () => {
+
+      if (route.name === 'search') {
+
+        function searchDismissRedirectFn ({ router }) {
+          if (history.state.back) {
+            return goBack()
+          } else {
+            return goHome()
+          }
+        }
+
+        extend(app.dialog.search.props, {
+          modelValue: true,
+          options: { maximized: true },
+          config: { dismiss: { redirect: { on: true, fn: searchDismissRedirectFn } } },
+          props: { reactiveProp: 'test' }
+        })
+
+        if (!app.dialog.search.instance) {
+          app.dialog.search.instance = $x.dialog(app.dialog.search.props)
+        }
+
+      } else {
+
+        return hide(app.dialog.search.props)
+      }
+    },
+    props: reactive({
+      modelValue: false,
+      id: 'Search',
+      router: 'search',
+      options: options,
+      load: () => import('src/components/YmMobile/Dialogs/Search.vue'),
+      onShow: ({ dialog }) => {
+        dialog.$move('bottom')
+      },
+      props: props,
+      plugins: { $move },
+      config
+    }),
+    instance: null
+  },
+  account: {
+    mount: () => {
+      if (route.name === 'account') {
+
+        const accountDismissRedirectFn = ({ router }) => {
+
+          const back = history.state.back ? resolve(history.state.back) : null
+
+          if (isAccountView(back)) {
+            return goHome()
+          } else {
+            return goBack()
+          }
+        }
+
+        extend(dialog.account.props, {
+          modelValue: { value: true },
+          config: { dismiss: { redirect: { on: true, fn: accountDismissRedirectFn } } },
+        })
+
+        if (!dialog.account.instance) {
+          app.dialog.account.instance = $x.dialog(dialog.account.props)
+          console.log('dialog.account.instance', dialog.account.instance)
+        }
+
+        dialog.accountslug.mount()
+
+      } else {
+        hide(dialog.account.props)
+        hide(dialog.accountslug.props)
+      }
+    },
+    props: {
+      modelValue: ref(false),
+      id: 'Account',
+      router: 'account',
+      options: {
+        maximized: true,
+        fullWidth: true,
+        fullHeight: true,
+        position: 'right',
+        noRouteDismiss: true,
+        // seamless: true,
+        ok: false
+      },
+      load: () => import('src/components/YmMobile/Dialogs/Account.vue'),
+    },
+    instance: null
+  },
+  accountslug: {
+    mount: () => {
+
+      const routePart = normalizePart(route)
+
+      if (routePart?.[0]) {
+
+        function isParent (back, routePart) {
+          const backPart = normalizePart(back)
+          return back && back.name === 'account' && backPart.length < routePart.length;
+        }
+
+        const accountslugDismissRedirectFn = ({ router }) => {
+
+          const back = history.state.back ? resolve(history.state.back) : null
+
+          if (isParent(back, routePart)) {
+            console.log('go-back')
+            return goBack()
+          } else {
+            console.log('go-to-account')
+            return goToAccount()
+          }
+        }
+
+        // empty from previous component
+        extend(dialog.accountslug.props, { load: { value: null } })
+
+        const componentParts = [...routePart].map((value) => kebabToPascalCase(value))
+        const component = kebabToPascalCase(componentParts.join('/'))
+
+        let options = {}
+        switch (routePart[0]) {
+          case 'switch':
+            options = { class: `${accountslugOriginalClass} narrow`, position: 'standard' }
+            break;
+          default:
+            options = { class: `${accountslugOriginalClass}`, position: 'right' }
+        }
+
+        extend(dialog.accountslug.props, {
+          config: { dismiss: { redirect: { on: true, fn: accountslugDismissRedirectFn } } },
+          load: { value: `components/YmMobile/Dialogs/Account/${component}` },
+          options: options
+        })
+
+        if (!dialog.accountslug.instance) {
+          dialog.accountslug.instance = $x.dialog(dialog.accountslug.props)
+          dialog.accountslug.instance.$style(`<style>.x-dialog-content.narrow { min-width: 300px }</style>`)
+        }
+
+        onFrame(() => {
+          // Settings.show()
+          extend(dialog.accountslug.props, { modelValue: { value: true } })
+        })
+
+      } else {
+        hide(dialog.accountslug.props)
+      }
+    },
+    props: {
+      modelValue: ref(true),
+      load: ref(() => import(`src/components/YmMobile/Dialogs/Account/Settings.vue`)),
+      // debug: ['componentChanged'],
+      id: 'Settings',
+      router: 'account',
+      options: reactive({
+        class: '',
+        position: 'right',
+        noRouteDismiss: true,
+        // seamless: true,
+        ok: false
+      }),
+      config: reactive({}),
+      props: { app, accountslugBack },
+      plugins: { $style }
+    },
+    instance: null,
+  }
+}
+
+const accountslugOriginalClass = dialog.accountslug.props.options.class
+
+console.log('dialog', dialog)
+// app.dialog = dialog
+//
+extend(app, { dialog })
+// console.log('app.dialog', dialog)
+
+const orig = {
+  test: reactive({ 'a': 1 })
+}
+const refa = {
+  test: {
+    test2: 'hello'
+  }
+}
+// for(let i in refa){
+//   orig[i] = refa[i]
+// }
+extend(orig, refa)
+console.log('orig', orig)
+
+console.log('app', app)
 
 function notDialogView (route) {
   // route is not 'watch' and not all other dialog views, like 'search', 'user', etc.
-  return !app.dialogViews.includes(route.name)
+  return !app.config.dialogViews.includes(route.name)
 }
 
 function onBackForward (fn) {
@@ -188,7 +411,7 @@ onBackForward(() => {
   const current = resolve(currentPath())
 
   if (notDialogView(current)) {
-    unfreezeView()
+    app.view.unfreeze()
     setBeforeWatchPath(current.fullPath)
   }
 })
@@ -218,23 +441,26 @@ watch(() => player.item, () => {
 })
 
 function goBeforeWatch () {
-  console.log('beforeWatchPath.value', beforeWatchPath.value)
-  return go(beforeWatchPath.value)
+  console.log('app.view.beforeWatch.value', app.view.beforeWatch.value)
+  return go(app.view.beforeWatch.value)
 }
 
 function goBack () {
+  console.log('goBack')
   return router.back()
 }
 
 function goHome () {
-  return go(app.home)
+  return go(app.config.home)
 }
 
 function goBackOrHome () {
   const back = history.state.back ? resolve(history.state.back) : null
-  return back && !isDialogView(back)
-    ? goBack()
-    : goHome()
+  if (back && !isDialogView(back)) {
+    return goBack()
+  } else {
+    return goHome()
+  }
 }
 
 function isWatchView () {
@@ -297,81 +523,45 @@ function currentPath () {
 
 function setBeforeWatchPath (to) {
   console.log('setBeforeWatchPath', to)
-  session.set('beforeWatchPath', beforeWatchPath.value = to)
+  session.set('app.view.beforeWatch', app.view.beforeWatch.value = to)
 }
 
 function getBeforeWatchPath () {
-  return beforeWatchPath.value = session.get('beforeWatchPath')
+  return app.view.beforeWatch.value = session.get('app.view.beforeWatch')
 }
 
 function youtubeGo (to) {
 
   const watchToWatch = to.name === 'watch' && route.name === 'watch'
 
-  return watchToWatch ? replace(to) : push(to)
+  if (watchToWatch) {
+    return replace(to)
+  } else {
+    return push(to)
+  }
 }
 
 function isDialogView (route) {
-  return app.dialogViews.includes(route.name)
+  return app.config.dialogViews.includes(route.name)
 }
 
 function go (to) {
   to = resolve(to)
 
   if (isDialogView(to)) {
-    freezeView()
+    app.view.freeze()
   } else {
-    unfreezeView()
+    app.view.unfreeze()
     setBeforeWatchPath(to.fullPath)
   }
 
-  if (app.history === 'replace') {
-    return youtubeGo()
+  if (app.config.history === 'replace') {
+    return youtubeGo(to)
   } else {
     return push(to)
   }
 }
 
-function mountPlayer (props) {
-  extend(playerDialog, props)
-  if (!Player) Player = $x.dialog(playerDialog)
-}
-
-const account = {
-  modelValue: ref(false),
-  id: 'Account',
-  router: 'account',
-  options: {
-    maximized: true,
-    fullWidth: true,
-    fullHeight: true,
-    position: 'right',
-    noRouteDismiss: true,
-    // seamless: true,
-    ok: false
-  },
-  load: () => import('src/components/YmMobile/Dialogs/Account.vue'),
-}
-
-
-const settings = {
-  modelValue: ref(true),
-  load: ref(() => import(`src/components/YmMobile/Dialogs/Account/Settings.vue`)),
-  debug: ['componentChanged'],
-  id: 'Settings',
-  router: 'account',
-  options: reactive({
-    class: '',
-    position: 'right',
-    noRouteDismiss: true,
-    // seamless: true,
-    ok: false
-  }),
-  props: { app, settingsBack },
-  plugins: { $style }
-}
-
-const originalClass = settings.options.class
 const accountRoute = 'account'
 
 function normalizePart (route) {
@@ -380,8 +570,6 @@ function normalizePart (route) {
 }
 
 function goUpOneLevel (routePart) {
-
-  console.log('routePart:==', routePart)
   routePart.pop()
   return go({ name: accountRoute, params: { part: routePart } })
 }
@@ -390,31 +578,34 @@ function goUpOneLevel (routePart) {
  * Handle back button
  * @returns {*}
  */
-function settingsBack () {
+function accountslugBack () {
 
-  const back = history.state.back ? router.resolve(history.state.back) : null
+  const back = history.state.back ? resolve(history.state.back) : null
 
-  // current settings route 'part' param
+  // current accountslug route 'part' param
   let routePart = normalizePart(route)
 
-  if (back) {
+  if (!back) {
+    return goUpOneLevel(routePart)
+  }
 
-    // if back is not 'account'
-    if (!isAccountView(back)) goUpOneLevel(routePart)
+  // if back is not 'account'
+  if (!isAccountView(back)) {
+    return goUpOneLevel(routePart)
+  }
 
-    // back history 'part' param
-    let backPart = normalizePart(back)
+  // back history 'part' param
+  let backPart = normalizePart(back)
 
-    console.log('backPart', backPart, 'routePart', routePart)
-    // back is 'settings' route, but up 1 level
-    // for ex. 'settings/general/captions', up one level route
-    // is 'settings/general', so just by going back we will
-    // get desired history movement
-    const backIsUpLevel = backPart.length < routePart.length
-    return backIsUpLevel ? goBack() : goUpOneLevel(routePart)
+  // back is 'accountslug' route, but up 1 level
+  // for ex. 'accountslug/general/captions', up one level route
+  // is 'accountslug/general', so just by going back we will
+  // get desired history movement
+  const backIsUpLevel = backPart.length < routePart.length
 
+  if (backIsUpLevel) {
+    return goBack()
   } else {
-    // go up one level
     return goUpOneLevel(routePart)
   }
 }
@@ -423,199 +614,24 @@ function goToAccount () {
   return go({ name: 'account' })
 }
 
-const hideAndDisableRedirect = {
-  modelValue: { value: false },
-  config: { dismiss: { redirect: { on: false } } }
-}
-
 function isAccountView (route) {
   return route.name === 'account'
 }
 
-function mountAccount () {
 
-  if (route.name === 'account') {
-
-    const accountDismissRedirectFn = ({ router }) => {
-      const back = history.state.back ? resolve(history.state.back) : null
-      return isAccountView(back) ? goHome() : goBack()
-    }
-
-    extend(account, {
-      modelValue: { value: true },
-      config: { dismiss: { redirect: { on: true, fn: accountDismissRedirectFn } } },
-    })
-
-    if (!Account) Account = $x.dialog(account)
-
-    mountSettings()
-
-  } else {
-    unmount(account)
-    unmount(settings)
+function hide (obj) {
+  const hideAndDisableRedirect = {
+    modelValue: isRef(obj.modelValue) ? { value: false } : false,
+    config: { dismiss: { redirect: { on: false } } }
   }
-}
-
-function mountSettings () {
-  const routePart = normalizePart(route)
-
-  console.log('routePart', routePart)
-
-  function isNotAccountDescendant (route) {
-    return route && route.name === 'account' && route.params.part.length === 0
-  }
-
-  if (routePart?.[0]) {
-
-    const settingsDismissRedirectFn = ({ router }) => {
-      const back = history.state.back ? resolve(history.state.back) : null
-      return isNotAccountDescendant(back) ? goBack() : goToAccount()
-    }
-
-    // empty from previous component
-    extend(settings, { load: { value: null } })
-
-    const componentParts = [...routePart].map((value) => kebabToPascalCase(value))
-    const component = kebabToPascalCase(componentParts.join('/'))
-
-
-    if (!Settings) {
-      Settings = $x.dialog(settings)
-      Settings.$style(`<style>.x-dialog-plugin-load.narrow { min-width: 300px }</style>`)
-    }
-
-    let options = {}
-    switch (routePart[0]) {
-      case 'switch':
-        options = { class: `${originalClass} narrow`, position: 'standard' }
-        break;
-      default:
-        options = { class: `${originalClass}`, position: 'right' }
-    }
-
-    extend(settings, {
-      modelValue: { value: true },
-      config: { dismiss: { redirect: { on: true, fn: settingsDismissRedirectFn } } },
-      load: { value: `components/YmMobile/Dialogs/Account/${component}` },
-      options: options
-    })
-
-  } else {
-    unmount(settings)
-  }
-}
-
-function unmount (obj) {
   extend(obj, hideAndDisableRedirect)
 }
 
-const show = ref(true)
-
-const options = reactive({
-  maximized: false,
-  fullWidth: true,
-  fullHeight: true,
-  position: 'right',
-  seamless: true,
-  ok: false
-})
-
-const load = ref(() => import('src/components/YmMobile/Dialogs/Search.vue'))
-
-const props = reactive({
-  go,
-  reactiveProp: 'lalala',
-  options: options
-})
-
-const config = reactive({
-  dismiss: { redirect: { on: false } }
-})
-
-const search = {
-  modelValue: ref(false),
-  id: 'Search',
-  router: 'search',
-  options: options,
-  load: load,
-  onShow: ({ dialog }) => {
-    dialog.$move('bottom')
-  },
-  props: props,
-  plugins: { $move },
-  config
-}
-
-function mountSearch () {
-
-  if (route.name === 'search') {
-    // search.modelValue.value = true
-    extend(search, {
-      modelValue: {
-        value: true
-      },
-      options: {
-        maximized: true
-      },
-      config: {
-        dismiss: {
-          redirect: {
-            on: true,
-            fn: ({ router }) => {
-              return history.state.back ? router.back() : go(app.home)
-            }
-          }
-        }
-      },
-      // props: { reactiveProp: 'yes '}
-    })
-    if (!Search) Search = $x.dialog(search)
-
-  } else {
-
-    // search.modelValue.value = false
-    extend(search, {
-      modelValue: { value: false, },
-      options: { maximized: false },
-      config: { dismiss: { redirect: { on: false } } },
-      // props: { reactiveProp: 'aaaa '}
-    })
-
-  }
-}
-
-
-const isFrozenView = ref(false)
-
-function freezeView (value) {
-
-  // more info on this implementation
-  // https://github.com/vuejs/vue-router/issues/703
-  // https://github.com/vuejs/rfcs/blob/master/active-rfcs/0036-router-view-route-prop.md
-  // https://github.com/vuejs/vue-router/issues/703#issuecomment-428123334
-
-  if (!isFrozenView.value) {
-
-    // save router-view state, make it static
-    // it won't change with router change now
-    bgRouterView.value = value || route.fullPath
-    isFrozenView.value = true
-  }
-}
-
-function unfreezeView () {
-
-  if (isFrozenView.value) {
-    // unfreeze router-view to be able to set it
-    // from the router navigation
-    bgRouterView.value = null
-    isFrozenView.value = false
-  }
-}
 
 const selectOptions = [
-  'lalala',
-  'blablabla'
+  'some text',
+  'another text',
+  'more text'
 ]
 
 const positionOptions = [
@@ -631,9 +647,167 @@ function toggleDarkMode (v, evt) {
   storage.set('darkMode', v)
 }
 
-function mountMenu () {
-  if (!Menu) Menu = $x.dialog(menu)
+const app2 = window
+
+const level = ref(1)
+
+const specificOptions = [
+  [
+    // 'dialog.accountslug.props.*',
+    'dialog.accountslug.props.props.app',
+    'dialog.accountslug.props.config.*'
+  ],
+  ['dialog.accountslug.props'],
+  ['search.props.*', 'account.props.*', 'accountslug.props.*'],
+  ['config'],
+  ['player']
+]
+
+
+const specific = ref(specificOptions[0])
+
+const dd1 = ref(null)
+const surround = ref(null)
+
+const renderComponent = ref(true)
+
+function changeSpecific (value) {
+  // console.log('value', value, evt)
+  if (value === null) {
+    specific.value = []
+  }
+  forceRerender()
 }
+
+const variable = ref('app')
+
+
+const variables = {
+  'app': app,
+  'app.player': app.player,
+  'app.dialog': app.dialog,
+  'window': window,
+  'window.navigator': window.navigator
+}
+
+let actualVariable = { value: variables['app'] }
+
+async function changeVariable (value) {
+  // variable
+  actualVariable.value = {}
+  // nextTick(() => {
+
+  // })
+
+  try {
+    setTimeout(async () => {
+      actualVariable.value = variables[value]
+
+      await forceRerender()
+    })
+  } catch (e) {
+    console.error('we caught an error', e)
+    // do nothing
+  }
+
+}
+
+const forceRerender = async () => {
+
+
+  try {
+
+    const initial = surround.value.style.display
+    surround.value.style.display = 'none'
+    // Remove MyComponent from the DOM
+    renderComponent.value = false;
+    // Wait for the change to get flushed to the DOM
+    await nextTick();
+    // setTimeout(() => {
+    //
+
+    renderComponent.value = true;
+    surround.value.style.display = initial
+  } catch (e) {
+    // do nothing
+  }
+
+
+};
+
+const darkDd = ref(true)
+
+function toggleDarkDd () {
+  darkDd.value = !!darkDd.value
+  // forceRerender()
+}
+
+// function func () {
+//
+// }
+
+const func = () => {
+  // hello world
+}
+// app.test = 0
+// // app.localStorage = localStorage
+// setInterval(() => {
+//   app.test += 1
+//   // localStorage.setItem('testing', app.test )
+// }, 500)
+
+// if (app.dialog.account.instance === null){
+//   app.dialog.account.instance = reactive({})
+// }
+
+// app.dialog.account.instance.__tracker__ = reactive({i:0})
+setInterval(() => {
+  // app.dialog.account.instance.__tracker__.i++
+}, 50)
+
+// const ls = 'a'
+const map = new Map([['name','harry'], ['app', app]])
+setTimeout(() => {
+  map.set('test', 'test')
+  map.set('name', 'harryasdfasd""jfioasjdfoipjasdfopijasdopifjasdpoifjposaidjfosidjfospidjfosidjoidsjfoisjdoifjdsoifjosdj')
+}, 1000)
+
+const r = { test: ref(0)}
+const set = reactive(new Set(['names', ['Tom','Andrey','Jeremy','Diana','Noelle'], new Set(['app', app])]))
+setTimeout(() => {
+  set.add(['harryasdfasd""jfioasjdfoipjasdfopijasdopifjasdpoifjposaidjfosidjfospidjfosidjoidsjfoisjdoifjdsoifjosdj'])
+  set[0] = 'aaa'
+  console.log('set',set)
+  // set[3] = ['harryasdfasd""jfioasjdfoipjasdfopijasdopifjasdpoifjposaidjfosidjfospidjfosidjoidsjfoisjdoifjdsoifjosdj']
+}, 1000)
+// const ls = ['a']
+// ls.get()
+// ls[0] =  2
+// ls[1] =  {}
+
+// console.log('ls', ls)
+// const array = [];
+// ls.forEach(v => array.push(v));
+// const ls2 = Array.from(ls)
+// console.log('ls[test]', array)
+
+setInterval(() => {
+  // if (!('test' in app.dialog.account.instance))
+  //   app.dialog.account.instance.test = 0
+  // //
+  // if (app.view.state.value === '/explore'){
+  //   app.view.state.value = '/library'
+  //
+  // } else {
+  //   app.view.state.value = '/explore'
+  //
+  // }
+  // app.dialog.account.instance.test += 1
+  // console.log(app.dialog.account.instance.test)
+  // localStorage.setItem('testing', app.test )
+}, 100)
+
+const instance = getCurrentInstance()
 </script>
 <template>
   <q-layout view="hHh lpr fFf">
@@ -659,11 +833,125 @@ function mountMenu () {
                icon="sym_s_account_circle" />
       </q-toolbar>
     </q-header>
-    <q-page-container>
+    <q-page-container style="padding-top:10px">
 
-      <div class="q-pa-lg layout">
+      <div class="q-px-lg layout">
 
-        <q-toggle v-model="search.config.dismiss.redirect.on" label="config.dismiss.redirect.on" />
+        <div class="row">
+          <div class="col-grow q-pa-sm" style="padding-top:13px">
+            <q-item class="q-pa-none">
+              <q-item-section avatar style="min-width:44px;padding-right:0px !important">
+                <q-icon name="sym_s_visibility" class="app-viewer-icon" size="38px" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label><h6 class="q-pa-none q-ma-none app-viewer">XRay</h6>
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </div>
+
+          <div class="col-sm-1 q-pt-md">
+            <q-toggle
+
+              v-model="darkDd"
+              :dark="false"
+              :color="darkDd ? 'black': 'grey-10'"
+              keep-color
+              checked-icon="dark_mode"
+              unchecked-icon="light_mode"
+              @update:model-value="toggleDarkDd" />
+          </div>
+          <div class="col-md-2 q-pa-sm col-grow" style="padding-right:0">
+            <q-select
+              standout
+              v-model="variable"
+              @update:model-value="changeVariable"
+              label="vue-dd"
+              :options="Object.keys(variables)" />
+          </div>
+          <div class="col-md-5 q-pa-sm col-grow">
+            <q-select
+              standout
+              v-model="specific"
+              clearable
+              @update:model-value="changeSpecific"
+              label="open-specific" :options="specificOptions">
+              <template v-slot:selected>
+
+                <div
+                  v-if="specific.length"
+
+                  class="q-my-none q-ml-xs q-mr-none overflow-hidden"
+                  style="text-overflow:ellipsis;white-space: nowrap;"
+                >
+                  {{ specific }}
+                </div>
+              </template>
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt }}</q-item-label>
+
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+          </div>
+          <div class="col-sm-2 q-pa-sm col-grow" style="padding-right:0">
+            <q-select
+              standout
+              v-model="level"
+              @update:model-value="forceRerender"
+              label="open-level"
+              :options="[0,1,2,3,[1,2],[1,2,4,5]]" />
+          </div>
+        </div>
+        <div ref="surround">
+          <vue-dd
+            v-if="renderComponent"
+            ref="dd1"
+            :dark="darkDd"
+            :name="variable"
+            :model-value="actualVariable.value"
+            :open-level="level"
+            :open-specific="specific" />
+        </div>
+<!--        <vue-dd-->
+<!--          name="route"-->
+<!--          :model-value="instance"-->
+<!--        />-->
+<!--        <vue-dd-->
+<!--          name="router"-->
+<!--          :open-level="2"-->
+<!--          :open-specific="['currentRoute']"-->
+<!--          :model-value="router"-->
+<!--        />-->
+<!--        <vue-dd-->
+<!--          name="func"-->
+<!--          :open-specific="['']"-->
+<!--          :model-value="func"-->
+<!--        />-->
+        <vue-dd
+          name="map"
+          :open-specific="['','app.dialog.player.*','name']"
+          :model-value="map"
+        />
+        <vue-dd
+          name="set"
+          :open-specific="['','app.dialog.player.*','name']"
+          :model-value="set"
+        />
+        <vue-dd
+          name="r.dep"
+          :open-specific="['','app.dialog.player.*','name']"
+          :model-value="r.test"
+        />
+
+        <!--        <vue-dd name="app" v-model="app" :dark="false" :open-level="2" :open-specific="['dialog.accountslug.props.*','dialog.accountslug.props.config.*']" />-->
+        <!--        <vue-dd name="navitagor" v-model="app2" :open-level="1" :open-specific="['dialog.accountslug.props.*','dialog.accountslug.props.config.*']" />-->
+
+        <q-toggle v-model="config.dismiss.redirect.on" label="config.dismiss.redirect.on" />
         <q-toggle v-model="options.maximized" label="maximized" />
         <q-select v-model="props.reactiveProp" :options="selectOptions" label="Select Prop" />
         <q-select v-model="options.position" :options="positionOptions" label="Select Position" />
@@ -671,13 +959,24 @@ function mountMenu () {
         <q-input v-model="props.reactiveProp" />
         <br />
 
-        {{ beforeWatchPath }}
+        {{ orig.test.test2 }}
+        {{ orig.test.alala }}
 
-        <q-toggle v-model="search.modelValue.value" label="show" />
-        <!--    <pre>{{ player }}</pre>-->
-        <pre>{{ search }}</pre>
+        <q-input v-model="orig.test.test2" />
+        <q-input v-model="orig.test.alala" />
+        <br />
+        {{ app.view.beforeWatch.value }}
 
-        <div v-for="item in data.items" class="row q-pa-sm" @click="go({ name: 'watch', query: { id: item.id } })">
+        <q-toggle v-model="app.dialog.search.props.modelValue" label="show" />
+        <!--            <pre>{{ account }}</pre>-->
+
+        <!--        <vue-dd name="search" v-model="search" />-->
+        <!--<pre>-->
+        <!--        {{ search }}-->
+        <!--</pre>-->
+        <div v-for="item in data.items"
+             class="row q-pa-sm"
+             @click="go({ name: 'watch', query: { id: item.id } })">
           <div>
             <img width="100" :src="`https://img.youtube.com/vi/${item.id}/0.jpg`">
           </div>
@@ -689,18 +988,18 @@ function mountMenu () {
 
         <!--    <div id="plyr" data-plyr-provider="youtube" data-plyr-embed-id="bTqVqk7FSmY"></div>-->
 
-        <q-slider style="padding:7px 20" color="black" v-model="player.position" :min="0" :max="500" />
+        <q-slider style="padding:7px 20px" color="black" v-model="player.position" :min="0" :max="500" />
 
-        <router-view :route="routedDialog" v-slot="{ Component }">
+        <router-view :route="app.view.routerState.value" v-slot="{ Component }">
           <keep-alive>
             <component :is="Component" />
           </keep-alive>
         </router-view>
 
-        <router-view name="player" @mount="mountPlayer"></router-view>
-        <router-view name="menu" @mount="mountMenu"></router-view>
-        <router-view name="search" @mount="mountSearch"></router-view>
-        <router-view name="account" @mount="mountAccount"></router-view>
+        <router-view name="player" @mount="app.dialog.player.mount"></router-view>
+        <router-view name="menu" @mount="app.dialog.menu.mount"></router-view>
+        <router-view name="search" @mount="app.dialog.search.mount"></router-view>
+        <router-view name="account" @mount="app.dialog.account.mount"></router-view>
       </div>
     </q-page-container>
 
@@ -726,4 +1025,19 @@ function mountMenu () {
 .layout
   max-width: 1200px
   margin: 0 auto
+
+.adjust-back-arrow
+  margin-top: -5px
+  margin-left: -1px
+
+.app-viewer-icon
+  color: #116dea
+//background: -webkit-linear-gradient(45deg, #09009f, #00ff95 80%)
+//-webkit-background-clip: text
+//-webkit-text-fill-color: transparent
+
+.app-viewer
+  background: -webkit-linear-gradient(60deg, #116dea, #00ff95 90%)
+  -webkit-background-clip: text
+  -webkit-text-fill-color: transparent
 </style>

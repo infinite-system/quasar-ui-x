@@ -1,5 +1,4 @@
 <template>
-  <q-page class="row items-center justify-evenly">
     <example-component
       title="Example component"
       active
@@ -9,9 +8,11 @@
 
     <br />
     Hello
+
+    <vue-dd :model-value="w" name="test"></vue-dd>
     <x-link to="hello">Link</x-link>
 <!--    <x-link :to="{name:'test1'}">Test1</x-link>-->
-    <x-dialog ref="dialog" :options="{title:'Testing Component'}" :import="'components/LargeComponent'">Dialog
+    <x-dialog :model-value="false" ref="dialog" :options="{title:'Testing Component'}" :import="'components/LargeComponent'">Dialog
     </x-dialog>
     <br/>
     <br/>
@@ -22,17 +23,63 @@
     <br/>
     <q-btn @click="createDialog2">Create QDialog</q-btn>
     <router-view></router-view>
-  </q-page>
+
+
+    <h1>Recursive</h1>
+    <FileTree :contents="tree" />
+
 </template>
 
 <script setup lang="ts">
 import { Todo, Meta } from 'components/models';
 import ExampleComponent from 'components/ExampleComponent.vue';
-import { onMounted, ref } from 'vue';
+import { getCurrentInstance,onMounted, ref } from 'vue';
 import { useQuasar } from 'quasar'
 
-import { useX, XDialog } from 'quasar-ui-x'
+import {  useX, XDialog } from 'quasar-ui-x'
+import VueDd from '../components/vue-dd/VueDd.vue'
+import FileTree from '../components/FileTree.vue'
 
+//import RecursiveComponent from '../components/RecursiveComponent.vue';
+
+let w = window
+const tree =  [
+  {
+    type: 'file',
+    name: 'README.md'
+  },
+  {
+    type: 'folder',
+    name: 'src',
+    contents: [
+      {
+        type: 'file',
+        name: 'foo.js'
+      },
+    ]
+  },
+  {
+    type: 'folder',
+    name: 'tests',
+    contents: [
+      {
+        type: 'file',
+        name: 'setup.js'
+      },
+      {
+        name: 'unit',
+        type: 'folder',
+        contents: [
+          {
+            type: 'file',
+            name: 'foo.spec.js'
+          }
+        ]
+      }
+    ]
+  }
+]
+// console.log('Vue', getCurrentInstance())
 const $q = useQuasar()
 const $x = useX()
 // $x.dialog({})
@@ -83,3 +130,11 @@ const meta = ref<Meta>({
   totalCount: 1200
 });
 </script>
+<style>
+#container {
+  border: 2px solid #41b883;
+  display: flex;
+  margin: 0 auto;
+  max-width: 800px;
+}
+</style>

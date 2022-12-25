@@ -51,7 +51,7 @@ module.exports = function (ctx) {
 
       target: {
 
-        browser: ['es2019', 'edge88', 'firefox78', 'chrome87', 'safari13.1'],
+        browser: ['es2015', 'edge88', 'firefox78', 'chrome87', 'safari11.1'],
         // node: 'node16'
       },
 

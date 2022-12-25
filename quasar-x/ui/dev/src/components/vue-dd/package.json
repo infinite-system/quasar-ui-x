@@ -1,0 +1,37 @@
+{
+  "name": "vue-dd",
+  "version": "0.4.3",
+  "description": "Vue.js component for displaying JavaScript objects with circular references, forked and ported to Vue 3",
+  "main": "VueDd.vue",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/infinite-system/vue-dd"
+  },
+  "homepage": "https://github.com/infinite-system/vue-dd",
+  "bugs": {
+    "url": "https://github.com/infinite-system/vue-dd/issues",
+    "email": "ekalashnikov@gmail.com"
+  },
+  "keywords": [
+    "Vue",
+    "VueJs",
+    "dd",
+    "vue-dd",
+    "object",
+    "tree",
+    "view",
+    "json",
+    "viewer",
+    "lazy",
+    "circular",
+    "inspector"
+  ],
+  "author": {
+    "name": "Emanuel Buzek",
+    "email": "emanuel.buzek@gmail.com"
+  },
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}

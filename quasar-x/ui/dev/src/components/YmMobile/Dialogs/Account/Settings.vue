@@ -28,7 +28,7 @@ const essentialLinks = [
 </script>
 <template>
   <div class="row q-py-md">
-    <div style="margin-top:-6px">
+    <div class="adjust-back-arrow">
       <q-btn @click="settingsBack" flat round icon="sym_s_arrow_back" size="md" class="q-mx-sm" />
     </div>
     <div class="col-grow text-h5 q-pa-none">Settings</div>

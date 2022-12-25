@@ -46,3 +46,29 @@ export function XDialogPluginMove (dialog) {
     }
   }
 }
+
+export function XDialogPluginWide ({ $style = '$style' } = {}) {
+
+  return (dialog, name) => {
+    dialog[$style](`<style>
+      .x-dialog.wide .x-dialog-content {
+        border-radius: 0;
+        width: 100vw !important;
+      }
+
+      .x-dialog.wide .q-dialog__inner--minimized {
+        padding: 0;
+      }
+
+     .x-dialog.wide .q-dialog__inner--minimized > div {
+       max-width: 100vw !important;
+       width: 100vw !important;
+       max-height: 100vh !important;
+     }
+    </style>`)
+
+    dialog.update({
+      class: `${dialog.xClass()} wide`,
+    });
+  }
+}

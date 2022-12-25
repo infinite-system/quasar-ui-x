@@ -9,7 +9,7 @@ const children = pages.map(page => {
 
   if (page.file === 'XDialogYmMobile') {
 
-    const XDialogProxy = () => import('src/components/YmMobile/XDialogProxy.vue')
+    const XDialogProxy = () => import('src/components/YmMobile/XDialogExtended/XDialogProxy.vue')
 
     const DialogProxies = {
       menu: XDialogProxy,

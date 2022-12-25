@@ -16,7 +16,7 @@ const options = reactive(props.options)
 const go = toRaw(props.go)
 
 setTimeout(() => {
-  dialog.props({ test200: 'aaaaaa' }, { update: true })
+  dialog.props({ test: 'asfsdfs' })
 }, 3000)
 
 const search = ref('')
@@ -53,6 +53,7 @@ const positionOptions = [
     <div class="q-pa-md">
       <q-select v-model="options.position" :options="positionOptions" label="Select Position" />
     </div>
+    {{ reactiveProp }}
   </div>
 </template>
 <style lang="sass" scoped>

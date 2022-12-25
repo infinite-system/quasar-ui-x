@@ -10,23 +10,17 @@ const $x = useX()
 
 const props = defineProps({
   dialog: { default: () => ({}), type: Object },
-  player: { default: () => ({}), type: Object },
   go: { default: () => () => {}, type: Function },
-  beforeWatchPath: { default: '', type: String },
-  freezeView: { default: () => () => {}, type: Function },
   app: { default: () => ({}), type: Object },
 })
 
 const route = useRoute()
 const router = useRouter()
 
-const { beforeWatchPath } = toRefs(props)
-
 const dialog = toRaw(props.dialog)
-const player = reactive(props.player)
-const go = toRaw(props.go)
 const app = toRaw(props.app)
-const freezeView = toRaw(props.freezeView)
+const player = reactive(app.player)
+const go = toRaw(props.go)
 
 const switchItem = ref(null)
 const playerBox = ref(null)
@@ -36,22 +30,22 @@ onMounted(() => {
   watch(() => player.view, () => {
     switch (player.view) {
       case 'hidden':
-        playerBox.value.style.cssText = `transition:0.4s; height:0; padding:0; overflow:hidden;`
+        playerBox.value.style.cssText = `transition:0.4s; transform: scaleY(0); padding:0; overflow:hidden;`
         // dialog.update({ maximized: false })
 
         switchItem.value = null
         break;
       case 'folded':
 
-        playerBox.value.style.cssText = 'transition:0.4s; height:170px; overflow:auto;'
+        playerBox.value.style.cssText = 'transition:0.4s; height:142px;transform: scaleY(1); '
         // dialog.update({ maximized: false })
 
         switchItem.value = null
         break
       case 'full':
 
-        const topMargin = Platform.is.mobile && Platform.is.android ? 350 : 450
-        playerBox.value.style.cssText = `transition:0.4s; height:calc(100vh - ${topMargin}px); overflow:auto;`
+        const topMargin = Platform.is.mobile && Platform.is.android ? 350 : 350
+        playerBox.value.style.cssText = `transition:0.4s; height:calc(100vh - ${topMargin}px);transform: scaleY(1); overflow:auto;`
         // viewStyle.value = 'height:100vh;'
         // setTimeout(() => {
         //   // dialog.update({ maximized: true })
@@ -95,7 +89,7 @@ function userHasPanned ({ evt, ...pan }) {
 function noItem () {
   player.item = null
   if (history.state.back) router.back()
-  else go(app.home)
+  else go(app.config.home)
 }
 
 function getItem (watchId) {
@@ -103,10 +97,10 @@ function getItem (watchId) {
 }
 
 function freezeRouter () {
-  if (app.dialogViews.includes(route.name) && beforeWatchPath.value) {
+  if (app.config.dialogViews.includes(route.name) && app.view.beforeWatch.value) {
     // this will retain in memory the view when we start
     // going forward in history, after going backward in history first
-    freezeView(beforeWatchPath.value)
+    app.view.freeze(app.view.beforeWatch.value)
   }
 }
 
@@ -144,7 +138,7 @@ function swap () {
 
   // Handle 2 different history modes
   // Youtube Music like 'replace' style
-  if (app.history === 'replace') {
+  if (app.config.history === 'replace') {
     // replace history with stored player item
     // we only set the last playing item into the player
     // we do not mutate the player because of url query

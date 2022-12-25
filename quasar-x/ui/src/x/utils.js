@@ -11,6 +11,7 @@ import sleep from './utils/sleep'
 import { dynamicImport, smartImport } from './utils/import'
 import onFrame from './utils/on-frame'
 import { useX } from './utils/use-x'
+import { storage, session } from './utils/storage'
 export {
   useX,
   byId,
@@ -38,5 +39,7 @@ export {
   sleep,
   dynamicImport,
   smartImport,
-  onFrame
+  onFrame,
+  storage,
+  session
 }
