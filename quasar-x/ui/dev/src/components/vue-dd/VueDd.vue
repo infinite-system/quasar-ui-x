@@ -1,48 +1,177 @@
 <template>
-  <div
-    class="vue-dd"
-    :class="{'vue-dd-dark':dark}">
-    <node-base
+  <div ref="root" :id="rootId" :class="['vue-dd', {
+    'vue-dd-inline': inline,
+    'vue-dd-open': openClass,
+    'vue-dd-dark': dark,
+  }, css]">
+    <node-primitive
+      v-if="primitive"
+
+      :root="$refs.root"
+      :rootId="rootId"
+
       :modelValue="modelValue"
       :name="name"
-      :primary="true"
-      :level="0"
-      :openLevel="openLevel"
+      :rootName="name"
+      :scrollTo="scrollTo"
       :escapeQuotes="escapeQuotes"
+
+      pointer=""
+      :type="type"
+      :escapeQuotesFn="escapeQuotesFn" />
+    <node-complex
+      v-else
+
+      :root="$refs.root"
+      :rootId="rootId"
+
+      :modelValue="modelValue"
+      :name="name"
+      :rootName="name"
+      :paddingLeft="paddingLeft"
+      :openLevel="openLevel"
       :openSpecific="openSpecific"
-      :deep="deep"
+      :scrollTo="scrollTo"
+      :escapeQuotes="escapeQuotes"
+      :longText="longText"
+      :preview="preview"
+      :previewInitial="previewInitial"
+      :deep="isSet ? false : deep"
+      :watch="watch"
+
+      pointer=""
+      :type="type"
+      :getTypeFn="getTypeFn"
+      :isPrimitiveFn="isPrimitiveFn"
+      :escapeQuotesFn="escapeQuotesFn"
+
+      @toggle="toggle"
+      @open="open"
     />
   </div>
 </template>
 <script>
-import NodeBase from './NodeBase.vue';
+import NodeComplex from "./NodeComplex.vue";
+import NodePrimitive from "./NodePrimitive.vue";
+
+let uniqueId = 1
+const rootId = () => `dd_${uniqueId++}`
 
 export default {
   name: 'VueDd',
+  inheritAttrs: false,
+  emits: ['open', 'toggle'],
   props: {
+    // main options
     modelValue: undefined,
     name: { type: String, default: '' },
     openLevel: { type: [Number, Array], default: 0 },
-    openSpecific: { type: [Array, Object], default: () => [] },
+    openSpecific: { type: Array, default: () => [] },
+    scrollTo: { type: String, default: '' },
+    preview: { type: [Number, Boolean], default: 5 },
+    previewInitial: { type: Boolean, default: true },
+    escapeQuotes: { type: Boolean, default: false },
+    longText: { type: Number, default: 50 },
+    // styling options
+    class: { type: [String, Array, Object], default: '' },
+    inline: { type: Boolean, default: true },
     dark: { type: Boolean, default: true },
     fontFamily: { type: String, default: '"JetBrains Mono", "Courier", serif' },
-    fontSize: { type: String, default: '11px' },
-    paddingLeft: { type: String, default: '10px' },
-    escapeQuotes: { type: Boolean, default: true },
+    fontSize: { type: String, default: '.7rem' },
+    lineHeight: { type: String, default: '1rem' },
+    paddingLeft: { type: String, default: '.7rem' },
+    maxHeight: { type: String, default: '500px' },
+    maxWidth: { type: String, default: 'auto' },
+    position: { type: String, default: 'relative' },
+    // watch options
+    watch: { type: Boolean, default: true },
     deep: { type: Boolean, default: true },
   },
+  data () {
+    return {
+      rootId: rootId(),
+      openClass: false,
+      css: this.class,
+    }
+  },
+  mounted () {
+    if (this.scrollTo !== '') {
+      setTimeout(() => {
+        const scrollEl = document.getElementById(`${this.name}${this.rootId}.${this.scrollTo}`)
+        if (scrollEl) {
+          this.$refs.root.scrollTop = scrollEl.offsetTop
+          scrollEl.classList.add('vue-dd-highlight')
+        }
+      }, 0)
+    }
+  },
+  computed: {
+    type () {
+      return this.getTypeFn(this.modelValue)
+    },
+    primitive () {
+      return this.isPrimitiveFn(this.type)
+    },
+    isSet () {
+      return this.type === 'object' && this.modelValue instanceof Set
+    },
+  },
+  methods: {
+
+    open (setup) {
+      const { open, pointer, level } = setup
+      this.openClass = open
+      this.$emit('open', setup)
+    },
+    toggle (setup) {
+      const { event, open, pointer, level } = setup
+      this.open(setup)
+      this.$emit('toggle', setup)
+    },
+    getTypeFn (value) {
+      let _type = typeof value;
+
+      if (_type === 'object') {
+        if (value === null) {
+          return "null";
+        }
+        if (Array.isArray(value)) {
+          return "array";
+        }
+        return "object";
+      }
+      if (_type === 'string') {
+        if (value.length > this.longText) {
+          _type = 'longtext'
+        }
+      }
+      return _type;
+    },
+    isPrimitiveFn (type) {
+      return !(type === 'array' || type === 'object' || type === 'function' || type === 'longtext');
+    },
+    escapeQuotesFn (text) {
+      return this.escapeQuotes ? text.replaceAll('"', '\\"') : text
+    }
+  },
   components: {
-    NodeBase
+    NodeComplex,
+    NodePrimitive
   }
 }
 </script>
 <style>
-div.vue-dd, div.vue-dd pre {
+.vue-dd, .vue-dd pre {
   font-family: v-bind(fontFamily);
   font-size: v-bind(fontSize);
+  line-height: v-bind(lineHeight);
 }
 
-div.vue-dd {
+.vue-dd {
+  max-height: v-bind(maxHeight);
+  max-width: v-bind(maxWidth);
+  position: v-bind(position);
+
   text-align: left;
   color: #4e5e6b;
   padding: 2px 5px 2px 3px;
@@ -50,60 +179,76 @@ div.vue-dd {
   margin-bottom: 2px;
   background: #fff6de;
   border-radius: 3px;
-  border:1px solid #d7ccae;
+  border: 1px solid #d7ccae;
   overflow-y: auto;
   overflow-x: auto;
-  max-height: 500px;
+  scroll-behavior: smooth;
 }
 
-div.vue-dd.vue-dd-dark {
-  background: #000;
-  border:1px solid #000
+.vue-dd-open {
+
 }
 
-div.vue-dd-open {
+.vue-dd-open.vue-dd-inline {
   display: block;
-  overflow:visible;
-  scrollbar-color: #ccc white;
-  scrollbar-width: thin;
+}
+
+.vue-dd-inline:not(.vue-dd-open) {
+  display: inline-block;
+  margin-right: 3px;
+}
+
+.vue-dd.vue-dd-dark {
+  background: #000;
+  border: 1px solid #000
 }
 
 .vue-dd::-webkit-scrollbar {
   width: 4px;
   height: 4px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .vue-dd::-webkit-scrollbar-corner {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.05);
 }
+
 .vue-dd::-webkit-scrollbar-thumb {
   border-radius: 5px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.vue-dd.vue-dd-dark::-webkit-scrollbar {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.vue-dd.vue-dd-dark::-webkit-scrollbar-corner {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.vue-dd.vue-dd-dark::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/*.vue-dd-dark div.vue-dd-open::-webkit-scrollbar {*/
-/*  height: 4px;*/
-/*  background: rgba(0, 0, 0, 0.05);*/
-/*}*/
+.vue-dd-box-open {
+  display: block;
+  overflow: visible;
+  scrollbar-color: #ccc white;
+  scrollbar-width: thin;
+}
 
-/*.vue-dd-dark div.vue-dd-open::-webkit-scrollbar-thumb {*/
-/*  border-radius: 5px;*/
-/*  background: rgba(255, 255, 0, 0.2);*/
-/*}*/
-
-div.vue-dd-open > div {
+.vue-dd-box-open > div {
   /*float: left;*/
   display: block;
   overflow: visible;
 }
 
-div.vue-dd-open > div > div {
+.vue-dd-box-open > div > div {
   display: block;
   padding-left: v-bind(paddingLeft);
 }
 
-div.vue-dd-inline, div.vue-dd-inline div, div.vue-dd-inline div div {
+.vue-dd-box-inline, .vue-dd-box-inline div, .vue-dd-box-inline div div {
   display: inline-block;
   cursor: default;
   white-space: nowrap;
@@ -139,14 +284,27 @@ button.vue-dd-expand:active {
 .vue-dd-ref {
   -webkit-user-select: none;
   user-select: none;
-  cursor: pointer;
+  cursor: default;
   color: grey;
   font-family: Georgia, 'Courier', serif;
   font-size: 9px;
   font-style: italic;
   letter-spacing: -0.5px;
   display: inline-block;
-  padding-top: 0;
+  padding: 0 3px 0 0;
+}
+
+.vue-dd-r {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+  color: grey;
+  font-family: Georgia, 'Courier', serif;
+  font-size: 80%;
+  font-style: italic;
+  letter-spacing: -0.5px;
+  display: inline-block;
+  padding: 0 3px 0 0;
 }
 
 .vue-dd-function-f {
@@ -156,11 +314,10 @@ button.vue-dd-expand:active {
   color: grey;
   font-style: italic;
   font-family: Georgia, serif;
-  font-size: 9px;
+  font-size: 80%;
   letter-spacing: -1px;
   display: inline-block;
-  padding-top: 1px;
-  padding-left: 5px;
+  padding: 0 3px 0 3px;
 }
 
 .vue-dd-function-inline {
@@ -168,14 +325,11 @@ button.vue-dd-expand:active {
   font-style: italic;
 }
 
-.vue-dd-function-content {
-  padding: 0;
-}
-
 .vue-dd-function-start {
   display: inline;
   color: #55606a;
 }
+
 
 .vue-dd-dark pre.vue-dd-function-start {
   padding: 0;
@@ -186,6 +340,12 @@ button.vue-dd-expand:active {
 .vue-dd-dark pre.vue-dd-function-start .hljs-property {
   color: #6ec3ff;
 }
+
+
+.vue-dd-function-content {
+  padding: 0;
+}
+
 
 .vue-dd-function-content pre {
   padding: 0;
@@ -211,7 +371,7 @@ button.vue-dd-arrow {
   cursor: default;
   -webkit-user-select: none;
   user-select: none;
-  font-size: 9px;
+  font-size: 80%;
   padding: 0 3px 0 2px;
   transition: 0.2s;
 }
@@ -221,22 +381,12 @@ button.vue-dd-arrow:hover {
 }
 
 button.vue-dd-arrow-collapsed {
+  padding: 0 2px 0 2px;
   transform: rotate(-90deg);
 }
 
-.vue-dd-r {
-  -webkit-user-select: none;
-  user-select: none;
-  cursor: default;
-  color: grey;
-  font-family: Georgia, 'Courier', serif;
-  font-size: 9px;
-  font-style: italic;
-  letter-spacing: -0.5px;
-  display: inline-block;
-}
-
 .vue-dd-name {
+  padding-right: 0;
   cursor: default;
   color: #1b7ccf;
 }
@@ -249,15 +399,30 @@ button.vue-dd-arrow-collapsed {
 .vue-dd-name.vue-dd-function-name {
   color: #d114d1;
   font-weight: normal;
-  /*font-style: italic;*/
 }
 
-.vue-dd-prototype {
+.vue-dd-instance {
+  user-select: none;
   padding-left: 5px;
   font-style: italic;
   color: #21BA45;
   -webkit-user-select: none;
+}
+
+.vue-dd-size {
   user-select: none;
+  margin-left: 3px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #ffeed0;
+  color: #999;
+  font-size: 80%;
+  line-height: 100%;
+}
+
+.vue-dd-dark .vue-dd-size {
+  background: #131313;
+  color: #555;
 }
 
 .vue-dd-promise-prototype {
@@ -266,10 +431,30 @@ button.vue-dd-arrow-collapsed {
 }
 
 .vue-dd-promise-content {
-  padding: 0 4px;
-  font-style: italic;
   -webkit-user-select: none;
   user-select: none;
+  padding: 0 4px;
+  font-style: italic;
+}
+
+.vue-dd-highlight {
+  animation: vue-dd-highlight 1s;
+}
+
+.vue-dd-dark .vue-dd-highlight {
+  animation: vue-dd-highlight-on-dark 1s;
+}
+
+@keyframes vue-dd-highlight-on-dark {
+  from {
+    background-color: yellow;
+  }
+}
+
+@keyframes vue-dd-highlight {
+  from {
+    background-color: yellowgreen;
+  }
 }
 
 .vue-dd-null, .vue-dd-undefined {
@@ -296,10 +481,12 @@ button.vue-dd-arrow-collapsed {
 .vue-dd-key {
   color: #384e61;
   padding-left: 1px;
+  padding-right: 2px;
   font-weight: normal;
 }
 </style>
 <style>
+/* highlight.js styles */
 .vue-dd pre code.hljs {
   display: block;
   overflow-x: auto;

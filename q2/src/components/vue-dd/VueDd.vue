@@ -193,12 +193,13 @@ button.vue-dd-arrow-collapsed {
   font-weight: normal;
   font-style: italic;
 }
-.vue-dd-prototype {
+.vue-dd-instance {
   padding-left: 5px;
+  padding-right: 5px;
   font-style: italic;
   color: #21BA45;
   -webkit-user-select: none;
-    user-select: none;
+  user-select: none;
 }
 .vue-dd-promise-prototype {
   padding-right: 5px;

@@ -143,7 +143,7 @@ const dialog = {
       load: () => import('../components/YmMobile/Dialogs/Menu.vue'),
       props: { player, go, app },
       onLoad: () => {
-        // setInterval(() => {
+        setInterval(() => {
         // app.__tracker__.i++
         player.position += 1
         // app.__tracker__.scrollY = window.scrollY
@@ -151,7 +151,7 @@ const dialog = {
         if (player.position >= 500) {
           player.position = 0
         }
-        // }, 500)
+        }, 500)
       },
       plugins: {
         $style,
@@ -911,16 +911,18 @@ const instance = getCurrentInstance()
           <vue-dd
             v-if="renderComponent"
             ref="dd1"
-            :dark="darkDd"
+            :dark="false"
             :name="variable"
             :model-value="actualVariable.value"
             :open-level="level"
+            scroll-to="dialog.accountslug.instance"
             :open-specific="specific" />
         </div>
-<!--        <vue-dd-->
-<!--          name="route"-->
-<!--          :model-value="instance"-->
-<!--        />-->
+        <vue-dd
+          name="route"
+          :deep="false"
+          :model-value="instance"
+        />
 <!--        <vue-dd-->
 <!--          name="router"-->
 <!--          :open-level="2"-->

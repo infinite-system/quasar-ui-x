@@ -1,138 +1,173 @@
 <template>
-  <div :class="{'vue-dd-inline': !open}">
+  <div :class="{'vue-dd-box-inline': !open}">
     <div class="vue-dd-start">
+      <!--arrow-->
       <button
         @click="toggleOpen"
         class="vue-dd-arrow"
         :class="{'vue-dd-arrow-collapsed': !open}"
         v-html="'&#x25BC;'"></button>
+
+      <!--name-->
       <span
         v-if="name"
+        :id="id"
         @click="toggleOpen"
         @mousedown="preventSelect($event)"
         class="vue-dd-name"
         :class="{'vue-dd-function-name': isFunction}">{{ name }}<span v-show="level !== 0">:</span>
       </span>
-      <span v-show="name && isIterable && isRefReactive"
-            @mousedown="preventSelect($event)"
-            style="user-select:none">&nbsp;</span>
+
+      <!--R-->
       <span v-if="isIterable && isReactive"
             @click="toggleOpen"
             @mousedown="preventSelect($event)"
             class="vue-dd-r"
             title="Reactive">R</span>
+
+      <!--Ref-->
       <span v-else-if="isIterable && isRef"
             @click="toggleOpen"
             @mousedown="preventSelect($event)"
             class="vue-dd-ref"
             title="Ref">Ref</span>
+
+      <!--f-->
       <span v-else-if="isFunction"
             @click="toggleOpen"
             @mousedown="preventSelect($event)"
             class="vue-dd-function-f"
             title="Function">f</span>
-      <span v-show="name || isIterable && isRefReactive || isFunction"
-            @click="toggleOpen"
-            @mousedown="preventSelect($event)">&nbsp;</span>
+
+      <!--function start-->
       <pre v-if="isFunction && open"
-           @click="toggleOpen" class="vue-dd-function-start"
+           @click="toggleOpen"
+           class="vue-dd-function-start"
            v-html="functionName"></pre>
-      <span v-show="isIterable && open"
+
+      <!--{-->
+      <span v-if="isIterable && open"
             @click="toggleOpen"
             @mousedown="preventSelect($event)"
             v-html="charOpen" />
+
+      <!--instanceof-->
+      <span v-if="isIterable && open && instanceOf"
+            class="vue-dd-instance">{{ instanceOf }}</span>
+
+      <!--size-->
       <span v-show="isIterable && open"
-            class="vue-dd-prototype">{{ prototypeOf }}</span>
+            class="vue-dd-size">{{ getSize }}</span>
+
+      <!--promise-->
       <span v-if="isIterable && isPromise && !open"
-            class="vue-dd-prototype vue-dd-promise-prototype">Promise</span>
+            class="vue-dd-instance vue-dd-promise-prototype">Promise</span>
     </div>
     <div
       :class="{
-      'vue-dd-open': open,
-      'vue-dd-inline': !open,
-      'vue-dd-complex': true
+      'vue-dd-box-open': open,
+      'vue-dd-box-inline': !open,
+      'vue-dd-box-complex': true
     }"
-      @click="open = true">
+      @click="toggleOpen($event, true)">
       <div>
+
+        <!--{-->
         <span v-show="isIterable && !open" v-html="charOpen" />
+
+        <!--promise content-->
         <span v-if="isIterable && isPromise" class="vue-dd-promise-content">&lt;pending&gt;</span>
+
+        <!--expand button-->
         <button
-          v-show="isIterable && (!open && !expanded)"
+          v-show="isIterable && (!open && !expanded && !allowPreview)"
           @click="expand"
           class="vue-dd-expand">...
         </button>
 
         <div v-if="isIterable && (open || expanded)">
-          <div v-for="index in (open ? items.length : (items.length > 7 ? 7 : items.length))" :key="index">
+
+          <!--iterate arrays/objects/maps/sets-->
+          <div v-for="index in open
+                  // show all
+                  ? items.length
+                  // show preview
+                  : (allowPreview < items.length ? allowPreview : items.length)"
+               :key="index">
+
+            <!-- string | number | boolean | null | undefined -->
             <node-primitive
               v-if="isPrimitiveFn(getSpecialType(items[index-1]))"
+
+              :root="root"
+              :rootId="rootId"
+
               :modelValue="getModelValue(items[index-1])"
               :name="getName(items[index-1])"
-              :size="getSize"
-              :position="index"
+              :rootName="rootName"
               :escapeQuotes="escapeQuotes"
-              :escapeQuotesFn="escapeQuotesFn"
-              :type="getSpecialType(items[index-1])" />
-            <!--  Handle Map & Set objects -->
-            <node-complex
-              v-else-if="isMapSet"
-              :modelValue="getMapSet[items[index-1]]"
+
               :pointer="getPointer(items[index-1])"
-              :name="getName(items[index-1])"
-              :deep="isMap ? deep : false"
-              :primary="open"
-              :level="level+1"
-              :openLevel="useOpenLevel"
-              :openSpecific="useOpenSpecific"
               :size="getSize"
               :position="index"
               :type="getSpecialType(items[index-1])"
-              :escapeQuotes="escapeQuotes"
+
               :escapeQuotesFn="escapeQuotesFn"
-              :getTypeFn="getTypeFn"
-              :isPrimitiveFn="isPrimitiveFn"
             />
-            <!--  Handle regular objects -->
+            <!-- object, array, map, set, function, longtext -->
             <node-complex
               v-else
-              :modelValue="modelValue[items[index-1]]"
-              :pointer="getPointer(items[index-1])"
+
+              :root="root"
+              :rootId="rootId"
+
+              :modelValue="getModelValue(items[index-1])"
               :name="getName(items[index-1])"
-              :primary="open"
-              :deep="deep"
-              :level="level+1"
+              :rootName="rootName"
+              :deep="isSet ? false : deep"
+              :watch="watch"
+              :preview="open ? preview : false"
               :openLevel="useOpenLevel"
               :openSpecific="useOpenSpecific"
+              :longText="longText"
+              :escapeQuotes="escapeQuotes"
+
+              :level="level+1"
+              :pointer="getPointer(items[index-1])"
               :size="getSize"
               :position="index"
               :type="getSpecialType(items[index-1])"
-              :escapeQuotes="escapeQuotes"
+
               :escapeQuotesFn="escapeQuotesFn"
               :getTypeFn="getTypeFn"
               :isPrimitiveFn="isPrimitiveFn"
             />
+
           </div>
         </div>
 
+        <!--function content-->
         <div v-if="isFunction" class="vue-dd-function-content">
+
+          <!--if open and function content exists-->
           <pre v-if="open && functionContent" v-html="functionContent"></pre>
+          <!--if open and function content does not exist-->
           <span v-else-if="open && !functionContent"></span>
+          <!--if not open, display inline-->
           <span v-else class="vue-dd-function-inline">{{
-              primary
-                ? functionInlinePrimary
-                : functionInline(name)
-            }}<span
-              v-if="size && position && position !== size">,&nbsp;</span>
+              allowPreview ? functionInlinePreview : functionInline
+            }}<span v-if="shouldComma">,&nbsp;</span>
           </span>
         </div>
 
+        <!--long text-->
         <div v-if="isLongText" class="vue-dd-string">
-          <span v-if="open">{{longTextContent}}</span>
-          <span v-else class="vue-dd-string">{{longTextInline}}</span>
+          <span v-if="open">{{ longTextContent }}</span>
+          <span v-else>{{ longTextInline }}</span>
         </div>
 
         <span v-if="isIterable" v-html="charClose" />
-        <span v-if="isIterable && size && position && position !== size">,&nbsp;</span>
+        <span v-if="isIterable && shouldComma">,&nbsp;</span>
       </div>
     </div>
   </div>
@@ -177,33 +212,43 @@ function getAllPointer (pointer) {
 
 export default {
   name: 'NodeComplex',
+  inheritAttrs: false,
+  emits: ['open', 'toggle'],
   props: {
-    type: String,
+    // ref
+    root: undefined,
+    rootId: [String, Number],
+    // options
     modelValue: undefined,
-    pointer: [String, Number],
-    primary: Boolean,
-    level: Number,
-    deep: { type: Boolean, default: true },
-    position: Number,
-    size: Number,
-    openLevel: [Number, Array],
     name: [String, Number],
+    rootName: [String, Number],
+    openLevel: [Number, Array],
     openSpecific: Array,
     longText: Number,
     escapeQuotes: Boolean,
+    deep: Boolean,
+    watch: Boolean,
+    preview: [Boolean, Number],
+    previewInitial: Boolean,
+    // helpers
+    type: String,
+    pointer: { type: [String, Number], default: '' },
+    level: { type: Number, default: 0 },
+    size: Number,
+    position: Number,
+    // functions
     escapeQuotesFn: Function,
     isPrimitiveFn: Function,
     getTypeFn: Function,
   },
   data () {
     return {
+      id: this.getId(),
       hideTimes: 0,
-      isMounted: false,
       open: false,
-      expanded: this.primary,
-      // items: this.makeItems(),
-      getMapSet: {},
+      expanded: false,
       items: [],
+      getMapSet: {},
       getSize: 0,
       useOpenLevel: this.openLevel,
       useOpenSpecific: this.openSpecific,
@@ -211,16 +256,23 @@ export default {
     }
   },
   created () {
-    this.watch(this.deep)
+    this.expanded = this.allowPreview
+    this.items = this.makeItems()
+    if (this.watch) {
+      this.watchModelValue(this.deep)
+    }
   },
   methods: {
-    watch: function(deep) {
+    getId() {
+      return this.level === 0
+        ? `${this.rootName}${this.rootId}`
+        : `${this.rootName}${this.rootId}.${this.pointer}`
+    },
+    watchModelValue: function(deep) {
       return this.$watch('modelValue', () => {
-        this.items = this.makeItems()
-      }, {
-        deep: deep,
-        immediate: true
-      })
+          this.items = this.makeItems()
+        },
+        { deep: deep })
     },
     getPointer (index) {
       return this.pointer ? this.pointer + '.' + index : index
@@ -245,15 +297,30 @@ export default {
         event.preventDefault();
       }
     },
+    /**
+     * Get the name of key of an object or array
+     * If it is an array, those keys are not named
+     * @param key
+     * @returns {string|*}
+     */
     getName (key) {
-      // console.log('name', key)
       return this.isArray ? '' : key
     },
     expand () {
       this.expanded = true
     },
-    async toggleOpen () {
-      this.open = !this.open
+    toggleOpen (event, value) {
+
+      this.open = value === undefined ? !this.open : value
+      this.expanded = this.allowPreview
+
+      // emit 'toggle' event to parent
+      this.$emit('toggle', {
+        event: event,
+        open: this.open,
+        level: this.level,
+        pointer: this.pointer
+      })
     },
     makeItems () {
       switch (true) {
@@ -288,30 +355,12 @@ export default {
           return this.modelValue
       }
     },
-    functionInline (name) {
-      let f = this.modelValue.toString()
-      switch (true) {
-        case f.startsWith('function '):
-          f = f.substring(9).trim()
-          if (f.startsWith(name)) {
-            f = f.substring(name.length)
-          }
-          break
-        case f.startsWith('()'):
-          f = '(){...}'
-          break
-        case f.startsWith(name):
-          f = f.substring(name.length)
-          break
-      }
-      const maxFuncLength = 25
-      if (f.length > maxFuncLength) {
-        f = f.substring(0, maxFuncLength) + '...'
-      }
-      return f
-    },
+
   },
   computed: {
+    allowPreview () {
+      return !this.previewInitial && this.level === 0 ? false : this.preview
+    },
     isMap () {
       return this.isObject && this.modelValue instanceof Map
     },
@@ -321,7 +370,7 @@ export default {
     isMapSet () {
       return this.isMap || this.isSet
     },
-    prototypeOf () {
+    instanceOf () {
       const name = this.isObject
       && 'constructor' in this.modelValue
       && 'name' in this.modelValue.constructor
@@ -334,12 +383,9 @@ export default {
 
       if (this.openSpecific.length) {
 
-        const index = typeof this.openSpecific === 'object'
-          ? JSON.stringify(this.openSpecific)
-          : this.openSpecific
+        const index = this.openSpecific
 
         if (index in unwrapCache) {
-          // console.log('using cache...', this.openSpecific.toString());
           return unwrapCache[index]
         } else {
           this.openSpecific.forEach((el) => {
@@ -352,7 +398,6 @@ export default {
             }
           })
           unwrapCache[index] = unwrap
-          //console.log('unwrapCache', unwrapCache)
         }
 
       }
@@ -362,12 +407,12 @@ export default {
       return this.level + 1
     },
     charOpen () {
-      return this.type === 'object' ? "{" : "["
+      return this.isObject ? "{" : "["
     },
     charClose () {
-      return this.type === 'object' ? "}" : "]"
+      return this.isObject ? "}" : "]"
     },
-    functionInlinePrimary (name) {
+    functionInlinePreview () {
       const length = this.items.toString().length
       const maxLength = 100
       if (length > maxLength) {
@@ -376,18 +421,42 @@ export default {
         return this.items.toString()
       }
     },
+    functionInline () {
+      let f = this.modelValue.toString()
+      switch (true) {
+        case f.startsWith('function '):
+          f = f.substring(9).trim()
+          if (f.startsWith(this.name)) {
+            f = f.substring(this.name.length)
+          }
+          break
+        case f.startsWith('()'):
+          f = '(){...}'
+          break
+        case f.startsWith(this.name):
+          f = f.substring(this.name.length)
+          break
+      }
+      const maxFuncLength = 25
+      if (f.length > maxFuncLength) {
+        f = f.substring(0, maxFuncLength) + '...'
+      }
+      return f
+    },
     functionName () {
       let code = String(this.items)
+
       const newLinePosition = code.indexOf('\n')
       if (newLinePosition >= 0) {
         code = code.substring(0, newLinePosition)
       }
       const highlight = hljs.highlight(code, { language: 'javascript' }).value
       const comma = !this.functionContent && this.shouldComma ? ',' : ''
+
       return highlight + comma
     },
-
     functionContent () {
+
       let lines = String(this.items).trim().split('\n')
       if (lines.length) {
         // calculate extra white space
@@ -411,10 +480,11 @@ export default {
 
       return ''
     },
-    shouldComma() {
+    shouldComma () {
       return this.size && this.position && this.position !== this.size
     },
-    longTextInline(){
+    longTextInline () {
+
       let text = this.modelValue.substring(0, this.longText)
       text = this.escapeQuotesFn(text)
       text = `"${text}..."`
@@ -423,7 +493,7 @@ export default {
 
       return text + comma
     },
-    longTextContent(){
+    longTextContent () {
       let text = this.modelValue
       text = this.escapeQuotesFn(text)
       text = `"${text}"`
@@ -432,7 +502,7 @@ export default {
 
       return text + comma
     },
-    isLongText() {
+    isLongText () {
       return this.type === 'longtext'
     },
     isRefReactive () {
@@ -462,7 +532,7 @@ export default {
   },
   watch: {
 
-
+    // opens levels
     openLevel: {
       handler (value) {
 
@@ -486,6 +556,7 @@ export default {
       immediate: true
     },
 
+    // opens specific pointers
     unwrapSpecific: {
       handler (value) {
 
@@ -507,36 +578,46 @@ export default {
       immediate: true
     },
 
+    // fires events on open and closing
     open: {
       handler (value) {
 
         if (!value) {
-          // on initial load this will hide everything
-          // even if openSpecific is specified, this complicated
-          // logic is necessary
-          const resetLevels = () => {
+          const hideEverything = () => {
             this.useOpenLevel = 0
             this.useOpenSpecific = []
           }
+          // on initial load this will hide everything
+          // even if openSpecific is specified, this semi-complicated
+          // logic is necessary
           if (this.hideTimes === 0) {
-            resetLevels()
+            hideEverything()
           } else {
             // setTimeout:1 speeds up hiding significantly
-            setTimeout(() => resetLevels(), 1)
+            setTimeout(() => hideEverything(), 1)
           }
+          // all later hiding is sped up with setTimeout
           this.hideTimes++
         } else {
           this.useOpenLevel = this.openLevel
           this.useOpenSpecific = this.openSpecific
         }
 
+        // emit 'open' event to parent
+        this.$emit('open', {
+          open: value,
+          level: this.level,
+          pointer: this.pointer
+        })
+
       },
       immediate: true
     },
 
-    primary (primary) {
-      this.expanded = primary;
-      this.open = this.open && primary;
+    // expand previews
+    preview (preview) {
+      this.expanded = preview;
+      this.open = this.open && preview;
     }
   },
   components: {

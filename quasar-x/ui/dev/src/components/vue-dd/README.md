@@ -34,6 +34,6 @@ If you wish to change the visual appearance of the component, set the following 
 
 - `vue-dd` - Main component element
 - `vue-dd-primitive` - Element wrapping primitive values
-- `vue-dd-complex` - Element wrapping Objects and Arrays
+- `vue-dd-box-complex` - Element wrapping Objects and Arrays
 - `vue-dd-open` - The open button (chevron right/down)
 - `vue-dd-expand` - The expand button (...)

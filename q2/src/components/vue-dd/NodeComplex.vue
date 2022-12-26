@@ -42,9 +42,9 @@
             @mousedown="preventSelect($event)"
             v-html="charOpen" />
       <span v-show="open && isIterable"
-            class="vue-dd-prototype">{{ prototypeOf }}</span>
+            class="vue-dd-instance">{{ instanceOf }}</span>
       <span v-if="!open && isIterable && isPromise"
-            class="vue-dd-prototype vue-dd-promise-prototype">Promise</span>
+            class="vue-dd-instance vue-dd-promise-prototype">Promise</span>
     </div>
     <div
       :class="{
@@ -248,7 +248,7 @@ export default {
     useSize () {
       return this.getSize
     },
-    prototypeOf () {
+    instanceOf () {
       const name = typeof this.modelValue === 'object'
       && 'constructor' in this.modelValue
       && 'name' in this.modelValue.constructor
