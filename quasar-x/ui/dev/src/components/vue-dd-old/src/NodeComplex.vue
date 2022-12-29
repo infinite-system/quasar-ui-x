@@ -1,5 +1,5 @@
 <template>
-  <div :class="{'vue-dd-box-inline': !open}">
+  <div :id="id" :class="{'vue-dd-box-inline': !open}">
     <div class="vue-dd-start">
       <!--arrow-->
       <button
@@ -10,12 +10,12 @@
 
       <!--name-->
       <span
-        v-if="name"
-        :id="id"
+        v-if="String(name)"
+
         @click="toggleOpen"
         @mousedown="preventSelect($event)"
         class="vue-dd-name"
-        :class="{'vue-dd-function-name': isFunction}">{{ name }}<span v-show="level !== 0">:</span>
+        :class="{'vue-dd-f-name': isFunction}">{{ name }}<span v-if="level !== 0">:</span>
       </span>
 
       <!--R-->
@@ -36,13 +36,13 @@
       <span v-else-if="isFunction"
             @click="toggleOpen"
             @mousedown="preventSelect($event)"
-            class="vue-dd-function-f"
+            class="vue-dd-f"
             title="Function">f</span>
 
       <!--function start-->
       <pre v-if="isFunction && open"
            @click="toggleOpen"
-           class="vue-dd-function-start"
+           class="vue-dd-f-start"
            v-html="functionName"></pre>
 
       <!--{-->
@@ -56,31 +56,68 @@
             class="vue-dd-instance">{{ instanceOf }}</span>
 
       <!--size-->
-      <span v-show="isIterable && open"
+      <span v-if="isIterable && open && getSize"
             class="vue-dd-size">{{ getSize }}</span>
+
+
+      <!--focus-->
+      <span v-if="open && saveFocus"
+            ref="focusElement"
+            class="vue-dd-focus vue-dd-icon-eye"
+            @click="focusEmit"
+            @mouseenter="hover=true"
+            @mouseup="hover=false"
+            @mouseleave="hover=false"
+            :class="{
+              'vue-dd-focus-hover':hover,
+              'vue-dd-focus-selected':pointer === focus
+            }"
+            ></span>
 
       <!--promise-->
       <span v-if="isIterable && isPromise && !open"
             class="vue-dd-instance vue-dd-promise-prototype">Promise</span>
+
+      <!--forget-->
+      <span v-if="open && level === 0 && save && !cleared"
+            @click="askForget=true"
+            class="vue-dd-forget vue-dd-forget-q"
+      :class="{'vue-dd-forget-q-ask':askForget}">
+        <span v-if="askForget">clear save?</span>
+        <span v-else>forget</span>
+      </span>
+
+      <span v-if="askForget">
+        <span class="vue-dd-forget vue-dd-forget-yes" @click="forget">yes</span>
+        <span  class="vue-dd-forget vue-dd-forget-no" @click="askForget=false">no</span>
+      </span>
+      <span class="vue-dd-forget-cleared" v-if="cleared">
+        cleared
+      </span>
+
+
     </div>
     <div
       :class="{
-      'vue-dd-box-open': open,
+      'vue-dd-box': open,
       'vue-dd-box-inline': !open,
       'vue-dd-box-complex': true
-    }"
-      @click="toggleOpen($event, true)">
+    }">
       <div>
 
         <!--{-->
-        <span v-show="isIterable && !open" v-html="charOpen" />
+        <span v-if="isIterable && !open" v-html="charOpen" />
+
+        <!--size-->
+        <span v-if="isIterable && allowPreview && !open && getSize"
+              class="vue-dd-size">{{ getSize }}</span>
 
         <!--promise content-->
         <span v-if="isIterable && isPromise" class="vue-dd-promise-content">&lt;pending&gt;</span>
 
         <!--expand button-->
         <button
-          v-show="isIterable && (!open && !expanded && !allowPreview)"
+          v-if="isIterable && !open && !expanded && !allowPreview"
           @click="expand"
           class="vue-dd-expand">...
         </button>
@@ -104,15 +141,21 @@
 
               :modelValue="getModelValue(items[index-1])"
               :name="getName(items[index-1])"
-              :rootName="rootName"
               :escapeQuotes="escapeQuotes"
+              :focus="focus"
+              :save="save"
+              :saveFocus="saveFocus"
 
               :pointer="getPointer(items[index-1])"
+              :open="open"
+              :type="getSpecialType(items[index-1])"
               :size="getSize"
               :position="index"
-              :type="getSpecialType(items[index-1])"
 
               :escapeQuotesFn="escapeQuotesFn"
+              :emitFn="emitFn"
+
+              @openParent="openParent"
             />
             <!-- object, array, map, set, function, longtext -->
             <node-complex
@@ -123,7 +166,6 @@
 
               :modelValue="getModelValue(items[index-1])"
               :name="getName(items[index-1])"
-              :rootName="rootName"
               :deep="isSet ? false : deep"
               :watch="watch"
               :preview="open ? preview : false"
@@ -131,30 +173,38 @@
               :openSpecific="useOpenSpecific"
               :longText="longText"
               :escapeQuotes="escapeQuotes"
+              :focus="focus"
+              :save="save"
+              :saveFocus="saveFocus"
 
-              :level="level+1"
               :pointer="getPointer(items[index-1])"
+              :type="getSpecialType(items[index-1])"
+              :shared="shared"
+              :level="level+1"
               :size="getSize"
               :position="index"
-              :type="getSpecialType(items[index-1])"
 
               :escapeQuotesFn="escapeQuotesFn"
               :getTypeFn="getTypeFn"
               :isPrimitiveFn="isPrimitiveFn"
+              :unwrapSpecificFn="unwrapSpecificFn"
+              :emitFn="emitFn"
+
+              @openParent="openParent"
             />
 
           </div>
         </div>
 
         <!--function content-->
-        <div v-if="isFunction" class="vue-dd-function-content">
+        <div v-if="isFunction" class="vue-dd-f-content">
 
           <!--if open and function content exists-->
           <pre v-if="open && functionContent" v-html="functionContent"></pre>
           <!--if open and function content does not exist-->
           <span v-else-if="open && !functionContent"></span>
           <!--if not open, display inline-->
-          <span v-else class="vue-dd-function-inline">{{
+          <span @click="toggleOpen" v-else class="vue-dd-f-inline">{{
               allowPreview ? functionInlinePreview : functionInline
             }}<span v-if="shouldComma">,&nbsp;</span>
           </span>
@@ -182,6 +232,10 @@ import javascript from './highlight.js/javascript.min.js';
 
 hljs.registerLanguage('javascript', javascript);
 
+export function isObject (item) {
+  return (item && typeof item === 'object' && !Array.isArray(item));
+}
+
 function isPromise (p) {
   return p !== null &&
     typeof p === 'object' &&
@@ -189,8 +243,9 @@ function isPromise (p) {
     typeof p.catch === 'function';
 }
 
-let unwrapCache = {}
+
 let allPointerCache = {}
+// let unwrapCache = {}
 
 function getAllPointer (pointer) {
   let allPointer = '*'
@@ -213,7 +268,7 @@ function getAllPointer (pointer) {
 export default {
   name: 'NodeComplex',
   inheritAttrs: false,
-  emits: ['open', 'toggle'],
+  emits: ['open', 'toggle', 'focus', 'openParent', 'forget'],
   props: {
     // ref
     root: undefined,
@@ -221,7 +276,6 @@ export default {
     // options
     modelValue: undefined,
     name: [String, Number],
-    rootName: [String, Number],
     openLevel: [Number, Array],
     openSpecific: Array,
     longText: Number,
@@ -230,7 +284,11 @@ export default {
     watch: Boolean,
     preview: [Boolean, Number],
     previewInitial: Boolean,
+    focus: String,
+    save: Boolean,
+    saveFocus: Boolean,
     // helpers
+    shared: Object,
     type: String,
     pointer: { type: [String, Number], default: '' },
     level: { type: Number, default: 0 },
@@ -240,6 +298,8 @@ export default {
     escapeQuotesFn: Function,
     isPrimitiveFn: Function,
     getTypeFn: Function,
+    unwrapSpecificFn: Function,
+    emitFn: Function
   },
   data () {
     return {
@@ -252,21 +312,45 @@ export default {
       getSize: 0,
       useOpenLevel: this.openLevel,
       useOpenSpecific: this.openSpecific,
-      originalOpenLevel: this.openLevel
+      originalOpenLevel: this.openLevel,
+      askForget:false,
+      cleared:false,
+      hover:false
     }
   },
   created () {
+
     this.expanded = this.allowPreview
+
     this.items = this.makeItems()
     if (this.watch) {
       this.watchModelValue(this.deep)
     }
+
+    this.useOpenSpecific = this.openSpecific
+
   },
   methods: {
-    getId() {
+    forget() {
+      this.emitFn(this, 'forget', { askForget: this.askForget})
+      this.askForget = false
+      this.cleared = true
+      setTimeout(() => this.cleared = false,1000)
+    },
+    openParent () {
+      if (!this.open) {
+        this.toggleOpen(null, true)
+      }
+    },
+    setFocus() {
+      if (this.save){
+
+      }
+    },
+    getId () {
       return this.level === 0
-        ? `${this.rootName}${this.rootId}`
-        : `${this.rootName}${this.rootId}.${this.pointer}`
+        ? `_${this.rootId}`
+        : `_${this.rootId}.${this.pointer}`
     },
     watchModelValue: function(deep) {
       return this.$watch('modelValue', () => {
@@ -307,6 +391,9 @@ export default {
       return this.isArray ? '' : key
     },
     expand () {
+      if (!this.open) {
+        this.toggleOpen(null, true)
+      }
       this.expanded = true
     },
     toggleOpen (event, value) {
@@ -314,13 +401,21 @@ export default {
       this.open = value === undefined ? !this.open : value
       this.expanded = this.allowPreview
 
-      // emit 'toggle' event to parent
-      this.$emit('toggle', {
+      if (this.open) {
+        this.$emit('openParent')
+      }
+
+      this.emit('toggle', {
         event: event,
         open: this.open,
         level: this.level,
         pointer: this.pointer
       })
+    },
+    // recursive emit
+    // more info: https://stackoverflow.com/a/55650245/1502706
+    emit (name, ...args) {
+      this.emitFn(this, name, ...args)
     },
     makeItems () {
       switch (true) {
@@ -356,8 +451,26 @@ export default {
       }
     },
 
+    parentIsOpen () {
+      // this function is necessary for proper functioning of 'save' mode
+      // together with open-specific option
+      return (this.$parent.$options.name === 'NodeComplex' && this.$parent.open)
+        // VueDd is the root so no open parent check for it
+        || this.$parent.$options.name === 'VueDd'
+    },
+
+    focusEmit () {
+      this.emit('focus', {
+        pointer: this.pointer,
+        focusElement: this.$refs.focusElement
+      })
+    }
+
   },
   computed: {
+    unwrapSpecific () {
+      return this.unwrapSpecificFn(this.openSpecific)
+    },
     allowPreview () {
       return !this.previewInitial && this.level === 0 ? false : this.preview
     },
@@ -377,31 +490,6 @@ export default {
         ? this.modelValue.constructor.name
         : ''
       return name === 'Object' ? '' : name
-    },
-    unwrapSpecific () {
-      let unwrap = {}
-
-      if (this.openSpecific.length) {
-
-        const index = this.openSpecific
-
-        if (index in unwrapCache) {
-          return unwrapCache[index]
-        } else {
-          this.openSpecific.forEach((el) => {
-            const parts = String(el).split('.')
-            let pointer = '', i = 0
-            for (let k in parts) {
-              pointer += (i > 0 ? '.' : '') + parts[k]
-              unwrap[pointer] = true
-              i++
-            }
-          })
-          unwrapCache[index] = unwrap
-        }
-
-      }
-      return unwrap
     },
     nextLevel () {
       return this.level + 1
@@ -565,13 +653,30 @@ export default {
           && this.pointer !== null) {
 
           let allPointer = getAllPointer(this.pointer)
-          // console.log('allPointer', allPointer, this.pointer)
 
+          // check existence within the list
           if (this.pointer in value || allPointer in value) {
+
+            if (this.pointer in this.shared.hiddenPointers) {
+              /**
+               * this prevents save: true mode from colliding
+               * with open-specific parameters
+               * those items that are being hidden should not
+               * be opening up again, this prevents them from
+               * opening up, so this line is very important
+               * for seamless integration between save: true and
+               * open-specific: ['node','node1.node2'] modes
+               */
+              return void 0 // do not open, hiding is in progress
+            }
+
             // $nextTick is necessary here!
             this.$nextTick(() => {
-              this.open = true
+              if (this.parentIsOpen()) {
+                this.open = true
+              }
             })
+
           }
         }
       },
@@ -580,7 +685,8 @@ export default {
 
     // fires events on open and closing
     open: {
-      handler (value) {
+      handler (value, oldValue) {
+
 
         if (!value) {
           const hideEverything = () => {
@@ -603,9 +709,8 @@ export default {
           this.useOpenSpecific = this.openSpecific
         }
 
-        // emit 'open' event to parent
-        this.$emit('open', {
-          open: value,
+        this.emit('open', {
+          open: this.open,
           level: this.level,
           pointer: this.pointer
         })

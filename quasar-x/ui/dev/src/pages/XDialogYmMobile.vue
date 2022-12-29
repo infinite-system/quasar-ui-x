@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch, reactive, onBeforeUnmount, markRaw, isRef, nextTick, getCurrentInstance } from "vue";
-import VueDd from 'src/components/vue-dd/VueDd.vue'
+import VueDd from 'src/components/vue-dd/src/VueDd.vue'
 
 import { useRoute, useRouter } from "vue-router";
 import { useX, extend, isArray, onFrame, storage, session } from "#/x/utils";
@@ -690,7 +690,7 @@ const variables = {
   'window.navigator': window.navigator
 }
 
-let actualVariable = { value: variables['app'] }
+let actualVariable = { value: variables['app'], id: 'app' }
 
 async function changeVariable (value) {
   // variable
@@ -702,6 +702,7 @@ async function changeVariable (value) {
   try {
     setTimeout(async () => {
       actualVariable.value = variables[value]
+      actualVariable.id = value
 
       await forceRerender()
     })
@@ -807,6 +808,8 @@ setInterval(() => {
   // localStorage.setItem('testing', app.test )
 }, 100)
 
+const Storage = sessionStorage
+
 const instance = getCurrentInstance()
 </script>
 <template>
@@ -911,15 +914,23 @@ const instance = getCurrentInstance()
           <vue-dd
             v-if="renderComponent"
             ref="dd1"
-            :dark="false"
+            :id="actualVariable.id"
+            :dark="darkDd"
             :name="variable"
             :model-value="actualVariable.value"
             :open-level="level"
-            scroll-to="dialog.accountslug.instance"
+            focus="dialog.accountslug.props"
+            :save="true"
             :open-specific="specific" />
         </div>
         <vue-dd
-          name="route"
+          name="session"
+          :deep="false"
+          :model-value="Storage"
+        />
+        <vue-dd
+          name="instance"
+
           :deep="false"
           :model-value="instance"
         />

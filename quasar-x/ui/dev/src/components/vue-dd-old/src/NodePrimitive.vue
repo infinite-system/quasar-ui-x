@@ -1,7 +1,23 @@
 <template>
-  <span :id="id">
-    <span v-if="name !== ''"
-          class="vue-dd-key">{{ name }}:</span>
+  <span
+    :id="id"
+    class="vue-dd-primitive"
+    @click="$emit('openParent')">
+    <span
+      v-if="nameString"
+      class="vue-dd-key">{{ name }}:</span><span
+      v-if="nameString && open && saveFocus"
+      ref="focusElement"
+      class="vue-dd-focus vue-dd-icon-eye"
+      @click="focusEmit"
+      @mouseenter="hover=true"
+      @mouseup="hover=false"
+      @mouseleave="hover=false"
+      :class="{
+        'vue-dd-focus-hover':hover,
+        'vue-dd-focus-selected':pointer === focus
+      }"
+    ></span>
     <span v-if="type === 'null'"
           class="vue-dd-null">null</span>
     <span v-else-if="type === 'undefined'"
@@ -22,6 +38,7 @@
 export default {
   name: 'NodePrimitive',
   inheritAttrs: false,
+  emits: ['openParent', 'focus'],
   props: [
     // ref
     'root',
@@ -29,22 +46,41 @@ export default {
     // options
     'modelValue',
     'name',
-    'rootName',
     'escapeQuotes',
+    'save',
+    'saveFocus',
+    'focus',
     // helpers
+    'open',
     'pointer',
     'type',
     'size',
     'position',
     // functions
-    'escapeQuotesFn'
+    'escapeQuotesFn',
+    'emitFn'
   ],
   data () {
     return {
-      id: `${this.rootName}${this.rootId}.${this.pointer}`
+      id: `_${this.rootId}.${this.pointer}`,
+      hover: false,
+    }
+  },
+  methods: {
+    focusEmit () {
+      this.emit('focus', {
+        pointer: this.pointer,
+        focusElement: this.$refs.focusElement
+      })
+    },
+    emit (name, ...args) {
+      this.emitFn(this, name, ...args)
     }
   },
   computed: {
+    nameString () {
+      return String(this.name)
+    },
     shouldComma () {
       return this.size && this.position && this.position !== this.size
     }

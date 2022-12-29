@@ -11,7 +11,7 @@
         @click="toggleOpen"
         @mousedown="preventSelect($event)"
         class="vue-dd-name"
-        :class="{'vue-dd-function-name': isFunction}">{{ name }}<span v-show="level !== 0">:</span>
+        :class="{'vue-dd-f-name': isFunction}">{{ name }}<span v-show="level !== 0">:</span>
       </span>
       <span v-show="name && isIterable && isRefReactive"
             @mousedown="preventSelect($event)"
@@ -29,13 +29,13 @@
       <span v-else-if="isFunction"
             @click="toggleOpen"
             @mousedown="preventSelect($event)"
-            class="vue-dd-function-f"
+            class="vue-dd-f"
             title="Function">f</span>
       <span v-show="name || isIterable && isRefReactive || isFunction"
             @click="toggleOpen"
             @mousedown="preventSelect($event)">&nbsp;</span>
       <pre v-if="open && isFunction"
-           @click="toggleOpen" class="vue-dd-function-start"
+           @click="toggleOpen" class="vue-dd-f-start"
            v-html="functionName"></pre>
       <span v-show="open && isIterable"
             @click="toggleOpen"
@@ -91,10 +91,10 @@
           </div>
         </div>
 
-        <div v-if="isFunction" class="vue-dd-function-content">
+        <div v-if="isFunction" class="vue-dd-f-content">
           <pre v-if="open && functionContent" v-html="functionContent"></pre>
           <span v-else-if="open && !functionContent"></span>
-          <span v-else class="vue-dd-function-inline">{{ primary ? items : functionInline(name) }}<span
+          <span v-else class="vue-dd-f-inline">{{ primary ? items : functionInline(name) }}<span
             v-if="size && position && position !== size">,&nbsp;</span>
           </span>
         </div>

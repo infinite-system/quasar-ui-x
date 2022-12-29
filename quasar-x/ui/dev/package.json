@@ -29,7 +29,8 @@
   },
   "dependencies": {
     "vue-3-object-view": "^0.4.3",
-    "vue-router": "^4.0.0"
+    "vue-router": "^4.0.0",
+    "webpack-node-externals": "^3.0.0"
   },
   "devDependencies": {
     "on-change": "^4.0.2"

@@ -110,7 +110,7 @@ button.vue-dd-expand:active {
   display: inline-block;
   padding-top: 0;
 }
-.vue-dd-function-f {
+.vue-dd-f {
   -webkit-user-select: none;
     user-select: none;
   cursor: default;
@@ -122,36 +122,36 @@ button.vue-dd-expand:active {
   padding-top: 1px;
   padding-left: 4px;
 }
-.vue-dd-function-inline {
+.vue-dd-f-inline {
   color: #4e5e6b;
   font-style: italic;
 }
-.vue-dd-function-content {
+.vue-dd-f-content {
   padding: 0;
 }
-.vue-dd-function-start {
+.vue-dd-f-start {
   display: inline;
   color: #55606a;
 }
-.vue-dd-dark pre.vue-dd-function-start {
+.vue-dd-dark pre.vue-dd-f-start {
   padding: 0;
   margin: 0;
   -webkit-user-select: none;
     user-select: none;
   color: #cbeaff;
 }
-.vue-dd-dark pre.vue-dd-function-start .hljs-property {
+.vue-dd-dark pre.vue-dd-f-start .hljs-property {
   color: #6ec3ff;
 }
-.vue-dd-function-content pre {
+.vue-dd-f-content pre {
   padding: 0;
   margin: 0;
   color: #333;
 }
-.vue-dd-dark .vue-dd-function-content pre .hljs-property {
+.vue-dd-dark .vue-dd-f-content pre .hljs-property {
   color: #6ec3ff;
 }
-.vue-dd-dark .vue-dd-function-content pre {
+.vue-dd-dark .vue-dd-f-content pre {
   padding: 0;
   margin: 0;
   color: #cbeaff;
@@ -188,7 +188,7 @@ button.vue-dd-arrow-collapsed {
   font-weight: bold;
   color: #09BAFF;
 }
-.vue-dd-name.vue-dd-function-name {
+.vue-dd-name.vue-dd-f-name {
   color: #8e17c5;
   font-weight: normal;
   font-style: italic;

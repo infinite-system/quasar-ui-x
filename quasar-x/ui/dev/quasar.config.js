@@ -3,6 +3,7 @@
 
 const path = require('path')
 const webpack = require('webpack')
+const nodeExternals = require('webpack-node-externals');
 
 module.exports = function (ctx) {
   return {
@@ -71,6 +72,71 @@ module.exports = function (ctx) {
           .use(webpack.DefinePlugin, [{
             __UI_VERSION__: `'${require('../package.json').version}'`
           }])
+        //
+        // chain.plugin('copy').tap(options => {
+        //   options[0][0].ignore.push('src/components/vue-dd/**/*');
+        //   return options;
+        // });
+        // chain.module.rule('vue-dd')
+        //   // .test(/.+$/)
+        //   .exclude
+        //     .add(
+        //       path.resolve(__dirname, 'src/components/vue-dd/**/*')
+        //     )
+        // chain.plugins.(new webpack.IgnorePlugin({
+        //   resourceRegExp: /.*$/,
+        //   contextRegExp: /src\/components\/vue-dd/
+        // }))
+
+
+
+      },
+      extendWebpack (cfg, { isServer, isClient }) {
+
+
+        // console.log(path.resolve(__dirname, 'src/components/vue-dd'))
+
+
+
+        // cfg.module.rules[cfg.module.rules.length - 1].exclude = cfg.module.rules[0].exclude = cfg.module.rules[2].exclude =[
+        //   // {
+        //   // test: /\.(m?jsx?|tsx?|vue)$/,
+        //   // exclude:
+        //     path.resolve(__dirname, 'src/components/vue-dd/node_modules'),
+        // // }
+        // ]
+
+        //
+        // if (!('plugins' in cfg)){
+        //   cfg.plugins = []
+        // }
+        //   cfg.plugins.push(
+        //   new webpack.NormalModuleReplacementPlugin(
+        //     /src\/components\/vue-dd\/node_modules/,
+        //     'node_modules'
+        //   )
+        // )
+        //
+
+
+
+        //
+        // if (!('externals' in cfg)){
+        //   cfg.externals = []
+        // }
+        // cfg.target = 'web'
+        // cfg.externals.push(nodeExternals({
+        //   modulesFromFile: true
+        // }))
+        // cfg.externalsPresets = {
+        //   node: true // in order to ignore built-in modules like path, fs, etc.
+        // }
+        //
+
+
+
+
+        // console.log('cfg', JSON.stringify(cfg, null, 4))
       }
     },
 
