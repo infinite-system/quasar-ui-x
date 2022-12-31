@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch, reactive, onBeforeUnmount, markRaw, isRef, nextTick, getCurrentInstance } from "vue";
+import { computed, onMounted, ref, watch, reactive, onBeforeUnmount, markRaw, isRef, nextTick, getCurrentInstance, toRef, toRaw } from "vue";
 import VueDd from 'src/components/vue-dd/src/VueDd.vue'
 
 import { useRoute, useRouter } from "vue-router";
@@ -811,6 +811,11 @@ setInterval(() => {
 const Storage = sessionStorage
 
 const instance = getCurrentInstance()
+
+
+const arrayOfObjects = ref([22, { obj: ref(false) }, { obj: ref(true) }])
+const a = {a: arrayOfObjects}
+const aOpenSpecific = ['a']
 </script>
 <template>
   <q-layout view="hHh lpr fFf">
@@ -842,12 +847,13 @@ const instance = getCurrentInstance()
 
         <div class="row">
           <div class="col-grow q-pa-sm" style="padding-top:13px">
-            <q-item class="q-pa-none">
-              <q-item-section avatar style="min-width:44px;padding-right:0px !important">
-                <q-icon name="sym_s_visibility" class="app-viewer-icon" size="38px" />
+            <q-item class="q-pa-none  app-viewer">
+              <q-item-section avatar style="min-width:24px;padding-right:0px !important">
+<!--                <q-icon name="sym_s_visibility" class="app-viewer-icon" size="38px" />-->
+                <span class="vue-dd-focus vue-dd-focus-selected vue-dd-icon-eye app-viewer-icon" style="font-size:32px;margin:0 3px 0 auto;display:inline-block"></span>
               </q-item-section>
               <q-item-section>
-                <q-item-label><h6 class="q-pa-none q-ma-none app-viewer">XRay</h6>
+                <q-item-label><h6 class="q-pa-none q-ma-none">XRay</h6>
                 </q-item-label>
               </q-item-section>
             </q-item>
@@ -961,6 +967,12 @@ const instance = getCurrentInstance()
           :model-value="r.test"
         />
 
+        <vue-dd
+          name="arrayOfObjects"
+          :model-value="a"
+          :open-specific="aOpenSpecific"
+        />
+
         <!--        <vue-dd name="app" v-model="app" :dark="false" :open-level="2" :open-specific="['dialog.accountslug.props.*','dialog.accountslug.props.config.*']" />-->
         <!--        <vue-dd name="navitagor" v-model="app2" :open-level="1" :open-specific="['dialog.accountslug.props.*','dialog.accountslug.props.config.*']" />-->
 
@@ -973,10 +985,8 @@ const instance = getCurrentInstance()
         <br />
 
         {{ orig.test.test2 }}
-        {{ orig.test.alala }}
 
         <q-input v-model="orig.test.test2" />
-        <q-input v-model="orig.test.alala" />
         <br />
         {{ app.view.beforeWatch.value }}
 
