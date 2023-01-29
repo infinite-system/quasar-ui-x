@@ -7,9 +7,9 @@
   "main": "src/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/infinite-system/x"
+    "url": "https://github.com/infinite-system/quasar-ui-x"
   },
-  "bugs": "https://github.com/infinite-system/x/issues",
+  "bugs": "https://github.com/infinite-system/quasar-ui-x/issues",
   "homepage": "",
   "dependencies": {
     "quasar-ui-x": "latest"

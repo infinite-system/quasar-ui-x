@@ -1,0 +1,16 @@
+{
+  "extends": "@quasar/app-webpack/tsconfig-preset",
+  "compilerOptions": {
+//    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [ "src/*" ],
+      "#/*": [ "../src/*" ]
+    }
+  },
+    "exclude": [
+      "src/components/vue-dd/node_modules/*",
+      "src/components/vue-dd/test/*",
+      "src/components/vue-dd/vitest.config.ts",
+    ]
+}
