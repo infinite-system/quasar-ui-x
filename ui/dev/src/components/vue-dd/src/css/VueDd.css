@@ -39,6 +39,7 @@
 }
 
 .vue-dd-body {
+  transition: 0.1s;
 }
 
 .vue-dd-open {

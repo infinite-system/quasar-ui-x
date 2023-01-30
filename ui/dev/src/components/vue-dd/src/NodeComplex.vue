@@ -1,27 +1,27 @@
 <template>
-  <div :id="id" :class="{'vue-dd-body':true,'vue-dd-box-inline': !open}">
+  <div :id="id" :class="{'vue-dd-body':true,'vue-dd-box-inline': !isOpen}">
     <div class="vue-dd-start">
       <!--arrow-->
       <button
-          @click="toggleOpen"
-          class="vue-dd-arrow"
-          :class="{'vue-dd-arrow-collapsed': !open}"
-          v-html="arrow"></button>
+        @click="toggleOpen"
+        class="vue-dd-arrow"
+        :class="{'vue-dd-arrow-collapsed': !isOpen}"
+        v-html="arrow"></button>
 
       <!--name-->
       <span
-          v-if="showName"
-          @click="toggleOpen"
-          @mousedown="preventSelect($event)"
-          class="vue-dd-name"
-          :class="{
+        v-if="showName"
+        @click="toggleOpen"
+        @mousedown="preventSelect($event)"
+        class="vue-dd-name"
+        :class="{
             'vue-dd-f-name': isFunction,
             'vue-dd-key-of-array': parentIsArray
           }">{{ name }}<span class="vue-dd-colon" v-if="level !== 0">:</span>
       </span>
 
       <!--focus-->
-      <span v-if="open && saveFocus"
+      <span v-if="isOpen && saveFocus"
             ref="focusElement"
             class="vue-dd-focus vue-dd-icon-eye"
             @click="focusEmit"
@@ -55,35 +55,36 @@
             title="Function">f</span>
 
       <!--function start-->
-      <pre v-if="isFunction && open"
+      <pre v-if="isFunction && isOpen"
            @click="toggleOpen"
-           class="vue-dd-f-start"><span v-html="functionName"></span><span class="vue-dd-comma" v-if="shouldComma && !open">,</span></pre>
+           class="vue-dd-f-start"><span v-html="functionName"></span><span class="vue-dd-comma"
+                                                                           v-if="shouldComma && !isOpen">,</span></pre>
 
       <!--{ | [-->
-      <span v-if="isIterable && open"
+      <span v-if="isIterable && isOpen"
             @click="toggleOpen"
             @mousedown="preventSelect($event)"
             :class="charClass"
             v-html="charOpen" />
 
       <!--instanceof-->
-      <span v-if="isIterable && open && instanceOf"
+      <span v-if="isIterable && isOpen && instanceOf"
             class="vue-dd-instance">{{ instanceOf }}</span>
 
       <!--size-->
-      <span v-if="isIterable && open && getSize"
+      <span v-if="isIterable && isOpen && getSize"
             @click="toggleOpen"
             @mousedown="preventSelect($event)"
             class="vue-dd-size">{{ getSize }}</span>
 
       <!--promise closed-->
-      <span v-if="isIterable && isPromise && !open"
+      <span v-if="isIterable && isPromise && !isOpen"
             @click="toggleOpen"
             @mousedown="preventSelect($event)"
             class="vue-dd-instance vue-dd-promise-prototype">Promise</span>
 
       <!--forget-->
-      <span v-if="open && level === 0 && save && !cleared"
+      <span v-if="isOpen && level === 0 && save && !cleared"
             @click="askForget=true"
             class="vue-dd-forget vue-dd-forget-q"
             :class="{'vue-dd-forget-q-ask':askForget}">
@@ -104,36 +105,36 @@
 
     </div>
     <div
-        :class="{
-      'vue-dd-box': open,
-      'vue-dd-box-inline': !open,
+      :class="{
+      'vue-dd-box': isOpen,
+      'vue-dd-box-inline': !isOpen,
       'vue-dd-box-complex': true
     }">
       <div>
 
         <!--{-->
-        <span v-if="isIterable && !open" :class="charClass" v-html="charOpen" />
+        <span v-if="isIterable && !isOpen" :class="charClass" v-html="charOpen" />
 
         <!--size-->
-        <span v-if="isIterable && allowPreview && !open && getSize"
+        <span v-if="isIterable && allowPreview && !isOpen && getSize"
               @click="toggleOpen"
               @mousedown="preventSelect($event)"
               class="vue-dd-size">{{ getSize }}</span>
 
-        <!--promise open-->
+        <!--promise isOpen-->
         <span v-if="isIterable && isPromise" class="vue-dd-promise-content">&lt;pending&gt;</span>
 
         <!--expand button-->
         <button
-            v-if="isIterable && !open && !allowPreview"
-            @click="expand"
-            class="vue-dd-expand"
-            v-html="more"></button>
+          v-if="isIterable && !isOpen && !allowPreview"
+          @click="expand"
+          class="vue-dd-expand"
+          v-html="more"></button>
 
-        <div v-if="isIterable && (open || expanded)">
+        <div v-if="isIterable && (isOpen || expanded)">
 
           <!--iterate arrays/objects/maps/sets-->
-          <div v-for="index in open
+          <div v-for="index in isOpen
                   // show all
                   ? items.length
                   // show preview
@@ -141,8 +142,8 @@
                :key="index">
 
             <div>
-            <!-- string | number | boolean | null | undefined | symbol -->
-            <node-primitive
+              <!-- string | number | boolean | null | undefined | symbol -->
+              <node-primitive
                 v-if="isPrimitiveFn(getSpecialType(items[index-1]))"
 
                 :root="root"
@@ -157,7 +158,7 @@
                 :delimiter="delimiter"
 
                 :pointer="getPointer(items[index-1])"
-                :parentOpen="open"
+                :parentOpen="isOpen"
                 :type="getSpecialType(items[index-1])"
                 :parentType="type"
                 :size="getSize"
@@ -169,9 +170,9 @@
 
                 @openParent="openParent"
 
-            />
-            <!-- object, array, map, set, function, longtext -->
-            <node-complex
+              />
+              <!-- object, array, map, set, function, longtext -->
+              <node-complex
                 v-else
 
                 :root="root"
@@ -181,9 +182,10 @@
                 :name="items[index-1]"
                 :deep="isRef ? false : deep"
                 :watch="watch"
-                :preview="open ? preview : false"
+                :preview="isOpen ? preview : false"
                 :openLevel="useOpenLevel"
                 :openSpecific="useOpenSpecific"
+                :startClosed="startClosed"
                 :longText="longText"
                 :escapeQuotes="escapeQuotes"
                 :focus="focus"
@@ -195,7 +197,7 @@
                 :arrow="arrow"
                 :pointer="getPointer(items[index-1])"
                 :parentType="type"
-                :parentOpen="open"
+                :parentOpen="isOpen"
                 :type="getSpecialType(items[index-1])"
                 :shared="shared"
                 :level="level+1"
@@ -208,7 +210,7 @@
                 :unwrapSpecificFn="unwrapSpecificFn"
                 :emitFn="emitFn"
                 @openParent="openParent"
-            />
+              />
             </div>
           </div>
         </div>
@@ -216,30 +218,30 @@
         <!--function content-->
         <div v-if="isFunction" class="vue-dd-f-content">
 
-          <!--if open and function content exists-->
-          <pre v-if="open && functionContent"><span v-html="functionContent"></span><span class="vue-dd-comma"
-                                                                                          v-if="shouldComma">,</span></pre>
-          <!--if open and function content does not exist-->
-          <span v-else-if="open && !functionContent"></span>
-          <!--if not open, display inline-->
+          <!--if isOpen and function content exists-->
+          <pre v-if="isOpen && functionContent"><span v-html="functionContent"></span><span class="vue-dd-comma"
+                                                                                            v-if="shouldComma">,</span></pre>
+          <!--if isOpen and function content does not exist-->
+          <span v-else-if="isOpen && !functionContent"></span>
+          <!--if not isOpen, display inline-->
           <span v-else @click="toggleOpen" class="vue-dd-f-inline"><span
-              v-html="allowPreview ? functionInlinePreview : functionInline"></span><span
-              class="vue-dd-comma" v-if="shouldComma">,</span>
+            v-html="allowPreview ? functionInlinePreview : functionInline"></span><span
+            class="vue-dd-comma" v-if="shouldComma">,</span>
           </span>
         </div>
 
         <!--long text-->
         <div v-if="isLongText" class="vue-dd-string">
-          <span v-if="open">{{ longTextContent }}<span class="vue-dd-comma" v-if="shouldComma">,</span></span>
+          <span v-if="isOpen">{{ longTextContent }}<span class="vue-dd-comma" v-if="shouldComma">,</span></span>
           <span v-else>{{ longTextInline }}<span class="vue-dd-comma" v-if="shouldComma">,</span></span>
         </div>
 
         <!--expand button-->
         <button
-            v-if="isIterable && !open && allowPreview !== false && preview < items.length"
-            @click="expand"
-            class="vue-dd-expand"
-            v-html="more"></button>
+          v-if="isIterable && !isOpen && allowPreview !== false && preview < items.length"
+          @click="expand"
+          class="vue-dd-expand"
+          v-html="more"></button>
 
         <!--} or ]-->
         <span v-if="isIterable" :class="charClass" v-html="charClose" />
@@ -252,7 +254,7 @@
 <script>
 import NodePrimitive from "./NodePrimitive.vue";
 import { isReactive, isRef } from 'vue';
-import { isPromise } from './helpers.js';
+import { isPromise, onFrame } from './helpers.js';
 
 import hljs from './highlight.js/core.min.js';
 import javascript from './highlight.js/javascript.min.js';
@@ -275,6 +277,7 @@ export default {
     name: [String, Number],
     openLevel: [Number, Array],
     openSpecific: Array,
+    startClosed: Boolean,
     longText: Number,
     escapeQuotes: Boolean,
     deep: Boolean,
@@ -307,7 +310,7 @@ export default {
     return {
       id: this.getId(),
       hideTimes: 0,
-      open: false,
+      isOpen: false,
       expanded: false,
       items: [],
       getMapSet: {},
@@ -318,7 +321,8 @@ export default {
       askForget: false,
       cleared: false,
       hover: false,
-      unwatch: () => {}
+      unwatch: () => {},
+      initializedClosed: false
     }
   },
   mounted () {
@@ -368,20 +372,20 @@ export default {
       setTimeout(() => this.cleared = false, 1000)
     },
     openParent () {
-      if (!this.open) {
+      if (!this.isOpen) {
         this.toggleOpen(null, true)
       }
     },
     getId () {
       return this.level === 0
-          ? `_${this.rootId}`
-          : `_${this.rootId}${this.delimiter}${this.pointer}`
+        ? `_${this.rootId}`
+        : `_${this.rootId}${this.delimiter}${this.pointer}`
     },
     watchModelValue (deep) {
       return this.$watch('modelValue', () => {
-            this.items = this.makeItems()
-          },
-          { deep: deep })
+          this.items = this.makeItems()
+        },
+        { deep: deep })
     },
     getPointer (index) {
       return this.pointer ? this.pointer + this.delimiter + index : String(index)
@@ -416,25 +420,25 @@ export default {
       return this.isArray ? '' : key
     },
     expand () {
-      if (!this.open) {
+      if (!this.isOpen) {
         this.toggleOpen(null, true)
       }
       this.expanded = true
     },
     toggleOpen (event, value) {
 
-      const openValue = value === undefined ? !this.open : value
+      const openValue = value === undefined ? !this.isOpen : value
       this.setOpen(openValue, { user: true })
 
       this.expanded = this.allowPreview
 
-      if (this.open) {
+      if (this.isOpen) {
         this.$emit('openParent')
       }
 
       this.emit('toggle', {
         event: event,
-        open: this.open,
+        isOpen: this.isOpen,
         level: this.level,
         pointer: this.pointer
       })
@@ -479,9 +483,9 @@ export default {
     parentIsOpen () {
       // this function is necessary for proper functioning of 'save' mode
       // together with open-specific option
-      return (this.$parent.$options.name === 'NodeComplex' && this.$parent.open)
-          // VueDd is the root so no open parent check for it
-          || this.$parent.$options.name === 'VueDd'
+      return (this.$parent.$options.name === 'NodeComplex' && this.$parent.isOpen)
+        // VueDd is the root so no open parent check for it
+        || this.$parent.$options.name === 'VueDd'
     },
 
     focusEmit () {
@@ -491,16 +495,24 @@ export default {
       })
     },
 
-    setOpen(value, { user }) {
-      this.open = value
+    setOpen (value, { user }) {
+      this.isOpen = value
       this.emit('open', {
-        open: this.open,
+        isOpen: this.isOpen,
         level: this.level,
         pointer: this.pointer,
         user: user
       })
+    },
+    open () {
+      this.toggleOpen(null, true)
+    },
+    close () {
+      this.toggleOpen(null, false)
+    },
+    toggle () {
+      this.toggleOpen(null, !this.isOpen)
     }
-
   },
   computed: {
     parentIsArray () {
@@ -525,8 +537,8 @@ export default {
       const name = this.isObject
       && 'constructor' in this.modelValue
       && 'name' in this.modelValue.constructor
-          ? this.modelValue.constructor.name
-          : ''
+        ? this.modelValue.constructor.name
+        : ''
       return name === 'Object' ? '' : name
     },
     nextLevel () {
@@ -656,8 +668,8 @@ export default {
     },
     showName () {
       return (!this.parentIsArray && this.nameString)
-          // show array index when the arrays are open
-          || (this.parentIsArray && this.parentOpen)
+        // show array index when the arrays are open
+        || (this.parentIsArray && this.parentOpen)
     },
     nameString () {
       return String(this.name)
@@ -665,22 +677,43 @@ export default {
   },
   watch: {
 
+    startClosed () {
+      if (this.level === 0){
+        this.setOpen(!this.isOpen, { user: false })
+      }
+    },
     // opens levels
     openLevel: {
       handler (value) {
+
+        this.useOpenLevel = this.openLevel
+
+        if (this.startClosed && this.level === 0 && !this.initializedClosed) {
+          // start closed, do not open level 0
+          this.initializedClosed = true
+          return
+        }
 
         // open levels up to this one
         if (typeof this.openLevel === 'number') {
           if (this.level < this.openLevel) {
             this.setOpen(true, { user: false })
+          } else {
+            this.setOpen(false, { user: false })
           }
         }
 
         // handle several levels to pre-open [1,2,3,4]
         if (this.getTypeFn(this.openLevel) === 'array') {
           for (let i = 0; i < this.openLevel.length; i++) {
+
             if (this.level === parseInt(this.openLevel[i])) {
-              this.setOpen(true, { user: false })
+              // onFrame is important here to catch re-renders
+              onFrame(() => {
+                this.setOpen(true, { user: false })
+              })
+            } else {
+              this.setOpen(false, { user: false })
             }
           }
         }
@@ -694,8 +727,9 @@ export default {
       handler (value) {
 
         if (this.openSpecific.length
-            && typeof this.pointer !== 'undefined'
-            && this.pointer !== null) {
+          && typeof this.pointer !== 'undefined'
+          && this.pointer !== null) {
+
 
           let allPointer = this.getAllPointer(this.pointer)
 
@@ -715,11 +749,14 @@ export default {
               return void 0 // do not open, hiding is in progress
             }
 
-            // $nextTick is necessary here!
-            this.$nextTick(() => {
-              if (this.parentIsOpen()) {
-                this.setOpen(true, { user: false })
-              }
+            // onFrame & $nextTick is necessary here!
+            // just $nextTick is not enough, we have to wait for request animation frame
+            onFrame(() => {
+              this.$nextTick(() => {
+                if (this.parentIsOpen()) {
+                  this.setOpen(true, { user: false })
+                }
+              })
             })
 
           }
@@ -729,7 +766,7 @@ export default {
     },
 
     // fires events on open and closing
-    open: {
+    isOpen: {
       handler (value, oldValue) {
 
         if (!value) {
@@ -769,9 +806,16 @@ export default {
     // expand previews
     preview (preview) {
       this.expanded = preview;
-      this.setOpen(!!(this.open && preview), { user: false });
+      this.setOpen(!!(this.isOpen && preview), { user: false });
+    },
+    previewInitial () {
+      this.expanded = this.allowPreview
+    },
+    openSpecific () {
+      this.useOpenSpecific = this.openSpecific
     }
   },
+  // expose: ['$options', 'open', 'toggle', 'close', 'isOpen'],
   components: {
     NodePrimitive
   }

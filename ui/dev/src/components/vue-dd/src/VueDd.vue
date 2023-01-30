@@ -36,6 +36,7 @@
     <node-complex
         v-else
 
+        ref="nodeComplex"
         :root="$refs.root"
         :rootId="rootId"
 
@@ -45,6 +46,7 @@
         :openSpecific="useOpenSpecific"
         :focus="useFocus"
         :escapeQuotes="escapeQuotes"
+        :startClosed="startClosed"
         :longText="longText"
         :preview="preview"
         :previewInitial="previewInitial"
@@ -69,10 +71,10 @@
         :emitFn="emitFn"
 
         @show="showEmit"
-        @toggle="toggle"
-        @open="open"
+        @toggle="toggleEmit"
+        @open="openEmit"
         @focus="focusEmit"
-        @forget="forget"
+        @forget="forgetEmit"
     />
   </div>
 </template>
@@ -92,14 +94,12 @@ export default defineComponent({
   emits: ['open', 'toggle', 'focus', 'show'],
   props: {
     // main options
-    /**
-     * modelValue
-     */
     modelValue: { type: undefined, required: true },
     id: { type: [String, Number], default: '' },
     name: { type: String, default: '' },
     openLevel: { type: [Number, String, Array], default: 0 },
     openSpecific: { type: Array, default: () => [] },
+    startClosed: { type: Boolean, default: false },
     focus: { type: [String, Number], default: null },
     focusSticky: { type: Boolean, default: false },
     focusOffsetX: { type: Number, default: -35 },
@@ -136,7 +136,6 @@ export default defineComponent({
       css: this.class,
       useOpenSpecific: this.openSpecific,
       // if openLevel is string, convert to number int
-      useOpenLevel: typeof this.openLevel === 'string' ? parseInt(this.openLevel) : this.openLevel,
       memory: null,
       shared: {
         hiddenPointers: {} // must be defined as empty
@@ -157,6 +156,9 @@ export default defineComponent({
   },
   mounted () {},
   computed: {
+    useOpenLevel () {
+      return typeof this.openLevel === 'string' ? parseInt(this.openLevel) : this.openLevel
+    },
     cssVars () {
       return {
         '--vue-dd-fontFamily': this.fontFamily,
@@ -168,7 +170,7 @@ export default defineComponent({
       }
     },
     unwrapSpecific () {
-      return this.unwrapSpecificFn(this.useOpenSpecific)
+      return this.unwrapSpecificFn(this.openSpecific)
     },
     type () {
       return this.getTypeFn(this.modelValue)
@@ -184,7 +186,7 @@ export default defineComponent({
     },
   },
   methods: {
-    forget () {
+    forgetEmit () {
       if (this.save && typeof this.memory === 'object') {
         this.memory.open = {}
         this.shared.hiddenPointers = {}
@@ -214,6 +216,7 @@ export default defineComponent({
               this.$refs.root.scrollTop = pointerEl.offsetTop + this.focusOffsetY
 
               pointerEl.classList.add('vue-dd-highlight')
+              setTimeout(() => pointerEl.classList.remove('vue-dd-highlight'), 500)
 
               this.setFocusAlready = true
             }
@@ -224,7 +227,6 @@ export default defineComponent({
     getElement (pointer) {
       pointer = pointer === '' ? '' : `${this.delimiter}${pointer}`
       const elId = `_${this.rootId}${pointer}`
-      // console.log('elId', elId, document.getElementById(elId))
       return document.getElementById(elId)
     },
     getFocus () {
@@ -257,7 +259,6 @@ export default defineComponent({
     getOpenSpecific () {
       if (this.save) {
         // merge memory and specific params
-        // console.log('this.unwrapSpecific', this.unwrapSpecific)
         this.memory.open = { ...this.memory.open, ...this.unwrapSpecific }
         this.store().set(this.memory)
 
@@ -289,6 +290,12 @@ export default defineComponent({
 
         if (String(pointer) === String(oldFocus) && String(pointer) !== String(this.focus)) {
 
+          if (this.openSpecific.indexOf(pointer) === -1){
+            const index = this.useOpenSpecific.indexOf(pointer);
+            if (index > -1) { // only splice array when item is found
+              this.useOpenSpecific.splice(index, 1); // 2nd parameter means remove one item only
+            }
+          }
           // remove focus from memory
           delete this.memory.open[pointer]
 
@@ -300,6 +307,13 @@ export default defineComponent({
 
         } else {
 
+            // console.log('this.useOpenSpecific', oldFocus, this.useOpenSpecific, this.openSpecific)
+          if (this.openSpecific.indexOf(oldFocus) === -1){
+            const index = this.useOpenSpecific.indexOf(oldFocus);
+            if (index > -1) { // only splice array when item is found
+              this.useOpenSpecific.splice(index, 1); // 2nd parameter means remove one item only
+            }
+          }
           // remove old focus from memory
           delete this.memory.open[oldFocus]
 
@@ -322,6 +336,9 @@ export default defineComponent({
         // if pointer is null, reset to this.focus prop
         this.memory.focus = pointer === null ? this.focus : pointer
 
+        // modify specific downstream
+        this.useOpenSpecific.push(this.memory.focus)
+
         // save to memory
         this.store().set(this.memory)
 
@@ -343,24 +360,26 @@ export default defineComponent({
         this.setFocus()
       }
     },
-    open (setup) {
-      const { open, pointer, level, user } = setup
+    openEmit (setup) {
+      const { isOpen, pointer, level, user } = setup
 
       if (level === 0) {
+        if (this.startClosed && isOpen && this.useOpenSpecific.indexOf('') === -1) {
+          this.useOpenSpecific.push('')
+        }
         // add class to main vue-dd container class named 'vue-dd-open'
-        this.openClass = open
+        this.openClass = isOpen
       }
-      // console.log('open', open, 'pointer', pointer, 'level', level)
-
+      // console.log('isOpen', isOpen, 'pointer', pointer, 'level', level)
       this.$emit('open', setup)
     },
-    toggle (setup) {
+    toggleEmit (setup) {
 
-      const { event, open, pointer, level } = setup
+      const { event, isOpen, pointer, level } = setup
 
       if (this.save) {
 
-        if (open) {
+        if (isOpen) {
 
           // remove shared pointer to prevent re-opening
           delete this.shared.hiddenPointers[pointer]
@@ -394,7 +413,7 @@ export default defineComponent({
         // console.log('set memory', this.memory, this.useOpenSpecific)
       }
 
-      // console.log('toggle', open, 'pointer', pointer, 'level', level)
+      // console.log('toggle', isOpen, 'pointer', pointer, 'level', level)
       this.$emit('toggle', setup)
     },
 
@@ -469,7 +488,11 @@ export default defineComponent({
             // add focus element to elements to be unwrapped
             unwrap[this.useFocus] = true
           }
-          // console.log('unwrap', unwrap)
+
+          if (this.startClosed && '' in unwrap){
+            delete unwrap['']
+          }
+
           unwrapCache[index] = unwrap
         }
 
@@ -489,7 +512,19 @@ export default defineComponent({
         vm.$emit(name, ...args)
         vm = vm.$parent
       }
-    }
+    },
+    open() {
+      this.$refs.nodeComplex.open()
+    },
+    close() {
+      this.$refs.nodeComplex.close()
+    },
+    toggle() {
+      this.$refs.nodeComplex.toggle()
+    },
+    // isOpen() {
+    //   return this.$refs.nodeComplex.isOpen
+    // }
   },
   watch: {
     modelValue: {
@@ -500,8 +535,12 @@ export default defineComponent({
           this.setFocus()
         }
       }
+    },
+    openSpecific () {
+      this.useOpenSpecific = this.getOpenSpecific()
     }
   },
+  // expose: ['$options', 'open', 'toggle', 'close', 'isOpen', 'root'],
   components: {
     NodeComplex,
     NodePrimitive

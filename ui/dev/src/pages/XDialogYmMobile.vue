@@ -109,13 +109,13 @@ const dialog = {
       props: { player, go, app },
       onLoad: () => {
         setInterval(() => {
-        // app.__tracker__.i++
-        player.position += 1
-        // app.__tracker__.scrollY = window.scrollY
-        // // window.scrollY
-        if (player.position >= 500) {
-          player.position = 0
-        }
+          // app.__tracker__.i++
+          player.position += 1
+          // app.__tracker__.scrollY = window.scrollY
+          // // window.scrollY
+          if (player.position >= 500) {
+            player.position = 0
+          }
         }, 500)
       },
       plugins: {
@@ -176,7 +176,7 @@ const dialog = {
 
         extend(app.dialog.search.props, {
           modelValue: true,
-          options: { maximized: true },
+          options: { maximized: false },
           config: { dismiss: { redirect: { on: true, fn: searchDismissRedirectFn } } },
           props: { reactiveProp: 'test' }
         })
@@ -341,23 +341,9 @@ console.log('dialog', dialog)
 // app.dialog = dialog
 //
 extend(app, { dialog })
+
 // console.log('app.dialog', dialog)
 
-const orig = {
-  test: reactive({ 'a': 1 })
-}
-const refa = {
-  test: {
-    test2: 'hello'
-  }
-}
-// for(let i in refa){
-//   orig[i] = refa[i]
-// }
-extend(orig, refa)
-console.log('orig', orig)
-
-console.log('app', app)
 
 function notDialogView (route) {
   // route is not 'watch' and not all other dialog views, like 'search', 'user', etc.
@@ -592,9 +578,6 @@ function hide (obj) {
 }
 
 
-const selectOptions = ['some text', 'another text', 'more text']
-
-const positionOptions = ['left', 'right', 'bottom', 'top', 'standard']
 
 function toggleDarkMode (v, evt) {
   $q.dark.set(v)
@@ -603,7 +586,7 @@ function toggleDarkMode (v, evt) {
 
 const app2 = window
 
-const level = ref(0)
+const level = ref(1)
 
 const specificOptions = [
   [
@@ -629,17 +612,23 @@ function changeSpecific (value) {
   if (value === null) {
     specific.value = []
   }
-  forceRerender()
+  toggleSettings()
+  // forceRerender()
 }
 
 const variable = ref('app')
+const instance = getCurrentInstance()
 
 const variables = {
   'app': app,
-  'app.player': app.player,
-  'app.dialog': app.dialog,
+  'config': app.config,
+  'view': app.view,
+  'player': app.player,
+  'dialog': app.dialog,
+  'route': route,
+  'router': router,
+  'instance': instance,
   'window': window,
-  'window.navigator': window.navigator
 }
 
 let actualVariable = { value: variables['app'], id: 'app' }
@@ -649,6 +638,7 @@ async function changeVariable (value) {
   actualVariable.value = {}
 
   try {
+    toggleSettings()
     setTimeout(async () => {
       actualVariable.value = variables[value]
       actualVariable.id = value
@@ -673,8 +663,6 @@ const forceRerender = async () => {
     renderComponent.value = false;
     // Wait for the change to get flushed to the DOM
     await nextTick();
-    // setTimeout(() => {
-    //
 
     renderComponent.value = true;
     surround.value.style.display = initial
@@ -694,12 +682,40 @@ function toggleDarkDd () {
 
 const Storage = sessionStorage
 
-const instance = getCurrentInstance()
 
+
+const sticky = ref(true)
 
 const arrayOfObjects = ref([22, { obj: ref(false) }, { obj: ref(true) }])
-const a = {a: arrayOfObjects}
+const a = { a: arrayOfObjects }
 const aOpenSpecific = ['a']
+const vueDdSettings = ref(false)
+
+const startClosed = ref(true)
+const previewInitial = ref(false)
+
+function toggleSettings () {
+  vueDdSettings.value = !vueDdSettings.value;
+}
+
+function dragstart_handler (ev) {
+  // Add the target element's id to the data transfer object
+  // ev.dataTransfer.setData("text/plain", ev.target.id);
+}
+
+function dragEnd (evt) {
+  const rect = evt.target.getBoundingClientRect();
+
+  console.log('rect', rect)
+  surround.value.style.bottom = rect.bottom + 'px'
+  surround.value.style.left = rect.left + 'px'
+}
+const dd = ref(null)
+function toggleDd() {
+  dd.value.toggle()
+}
+
+const right = ref(true)
 </script>
 <template>
   <q-layout view="hHh lpr fFf">
@@ -729,105 +745,98 @@ const aOpenSpecific = ['a']
 
       <div class="q-px-lg layout">
 
-        <div class="row">
-          <div class="col-grow q-pa-sm" style="padding-top:13px">
-            <q-item class="q-pa-none  app-viewer">
-              <q-item-section avatar style="min-width:24px;padding-right:0px !important">
-<!--                <q-icon name="sym_s_visibility" class="app-viewer-icon" size="38px" />-->
-                <span class="vue-dd-focus vue-dd-focus-selected vue-dd-icon-eye app-viewer-icon" style="font-size:32px;margin:0 3px 0 auto;display:inline-block"></span>
-              </q-item-section>
-              <q-item-section>
-                <q-item-label><h6 class="q-pa-none q-ma-none app-viewer-text">Vue-dd</h6>
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-          </div>
+<!--        <div class="row">-->
+<!--          <div class="col-grow q-pa-sm" style="padding-top:13px">-->
+<!--            <q-item class="q-pa-none  app-viewer">-->
+<!--              <q-item-section avatar style="min-width:24px;padding-right:0px !important">-->
+<!--                &lt;!&ndash;                <q-icon name="sym_s_visibility" class="app-viewer-icon" size="38px" />&ndash;&gt;-->
+<!--                <span class="vue-dd-focus vue-dd-focus-selected vue-dd-icon-eye app-viewer-icon"-->
+<!--                      style="font-size:32px;margin:0 3px 0 auto;display:inline-block"></span>-->
+<!--              </q-item-section>-->
+<!--              <q-item-section>-->
+<!--                <q-item-label>-->
+<!--                  <h5 class="q-pa-none q-ma-none app-viewer-text">vue-dd</h5>-->
+<!--                </q-item-label>-->
+<!--              </q-item-section>-->
+<!--            </q-item>-->
+<!--          </div>-->
+<!--        </div>-->
 
-          <div class="col-sm-1 q-pt-md">
-            <q-toggle
 
-              v-model="darkDd"
-              :dark="false"
-              :color="darkDd ? 'black': 'grey-10'"
-              keep-color
-              checked-icon="dark_mode"
-              unchecked-icon="light_mode"
-              @update:model-value="toggleDarkDd" />
-          </div>
-          <div class="col-md-2 q-pa-sm col-grow" style="padding-right:0">
-            <x-ray-select
-              standout
-              v-model="variable"
-              @update:model-value="changeVariable"
-              label="vue-dd"
-              :options="Object.keys(variables)" />
-          </div>
-          <div class="col-md-5 q-pa-sm col-grow">
-            <q-select
-              standout
-              v-model="specific"
-              clearable
-              @update:model-value="changeSpecific"
-              label="open-specific" :options="specificOptions">
-              <template v-slot:selected>
+        <div ref="surround" class="x-ray" :class="{'x-ray-right-align': right, 'x-ray-dark': darkDd}" :style="$q.platform.is.mobile ? 'max-width:93vw;max-height:50vh;':'max-width:50vw;max-height:60vh;'">
+          <div class="x-ray-inner">
+            <vue-dd
+              v-if="renderComponent"
+              ref="dd"
+              :id="actualVariable.id"
+              :dark="darkDd"
+              :name="variable"
+              :start-closed="startClosed"
+              :preview-initial="previewInitial"
+              :model-value="actualVariable.value"
+              :open-level="level"
+              :focus-sticky="sticky"
 
-                <div
-                  v-if="specific.length"
+              max-height="50vh"
+              max-width="100%"
+              :open-specific="specific" />
+            <!--@dragend="dragEnd($event)" draggable="true" -->
+            <span class="x-ray-eye" @click="toggleDd"><span
+              class="vue-dd-focus vue-dd-focus-selected vue-dd-icon-eye app-viewer-icon x-ray-floating"></span></span>
+            <span class="x-ray-wrench" @click="toggleSettings"><q-icon class="x-ray-wrench-icon" name="sym_s_build_circle" size="35px" /></span>
 
-                  class="q-my-none q-ml-xs q-mr-none overflow-hidden"
-                  style="text-overflow:ellipsis;white-space: nowrap;"
-                >
-                  {{ specific }}
-                </div>
-              </template>
-              <template v-slot:option="scope">
-                <q-item v-bind="scope.itemProps">
+            <div v-show="vueDdSettings" class="x-ray-settings">
+              <div class="q-pa-sm">
+                <x-ray-select
+                  v-model="specific"
+                  label="open-specific"
+                  style="max-width:200px; text-overflow:ellipsis "
+                  @update:model-value="changeSpecific"
+                  :options="specificOptions" />
+              </div>
+              <div class="q-pa-sm" style="padding-right:0">
+                <x-ray-select
+                  standout
+                  v-model="level"
+                  @update:model-value="toggleSettings()"
+                  label="open-level"
+                  :options="[0,1,2,3,[0,1,2],[0,1,2,4,5]]" />
 
-                  <q-item-section>
-                    <q-item-label>{{ scope.opt }}</q-item-label>
+              </div>
+              <div class="q-pa-sm">
+                <x-ray-checkbox label="focus-sticky" @update:model-value="toggleSettings" v-model="sticky" />
+              </div>
+              <div class="q-pa-sm">
+                <x-ray-checkbox label="start-closed" v-model="startClosed" />
+              </div>
+              <div class="q-pa-sm">
+                <x-ray-checkbox label="preview-initial" v-model="previewInitial" />
+              </div>
+              <div class="q-pa-sm">
+                <x-ray-checkbox label="dark" v-model="darkDd" />
+                <x-ray-checkbox label="right" @update:model-value="toggleSettings" v-model="right" />
+              </div>
 
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
-          </div>
-          <div class="col-sm-2 q-pa-sm col-grow" style="padding-right:0">
-            <x-ray-select
-              standout
-              v-model="level"
-              @update:model-value="forceRerender"
-              label="open-level"
-              :options="[0,1,2,3,[1,2],[1,2,4,5]]" />
+              <div class="q-pa-sm col-grow" style="padding-right:0">
+                <x-ray-select
+                  standout
+                  v-model="variable"
+                  @update:model-value="changeVariable"
+                  :options="Object.keys(variables)" />
+              </div>
+              <div style="text-align:right">
+                <button class="x-ray-ok" @click="toggleSettings">ok</button>
+              </div>
+            </div>
           </div>
         </div>
-        <div ref="surround">
-          <vue-dd
-            v-if="renderComponent"
-            ref="dd1"
-            :id="actualVariable.id"
-            :dark="darkDd"
-            :name="variable"
-            :model-value="actualVariable.value"
-            :open-level="level"
-            :save="true"
-            :open-specific="specific" />
-        </div>
 
-        <q-toggle v-model="config.dismiss.redirect.on" label="config.dismiss.redirect.on" />
-        <q-toggle v-model="options.maximized" label="maximized" />
-        <q-select v-model="props.reactiveProp" :options="selectOptions" label="Select Prop" />
-        <q-select v-model="options.position" :options="positionOptions" label="Select Position" />
-
-        <q-input v-model="props.reactiveProp" />
         <br />
 
-        {{ orig.test.test2 }}
-
-        <q-input v-model="orig.test.test2" />
         <br />
-        {{ app.view.beforeWatch.value }}
+        <!--        {{  app.view.beforeWatch.value }} -->
 
-        <q-toggle v-model="app.dialog.search.props.modelValue" label="show" />
+        <!--        <q-toggle v-model="app.dialog.search.props.modelValue" label="show" />-->
         <!--            <pre>{{ account }}</pre>-->
 
         <!--        <vue-dd name="search" v-model="search" />-->
@@ -850,7 +859,7 @@ const aOpenSpecific = ['a']
 
         <q-slider style="padding:7px 20px" color="black" v-model="player.position" :min="0" :max="500" />
 
-        <router-view :route="app.view.routerState.value" v-slot="{ Component }">
+        <router-view :app="app" :route="app.view.routerState.value" v-slot="{ Component }">
           <keep-alive>
             <component :is="Component" />
           </keep-alive>
@@ -867,6 +876,135 @@ const aOpenSpecific = ['a']
 </template>
 <style lang="sass">
 @import 'https://cdn.plyr.io/3.7.3/plyr.css'
+
+.x-ray
+  position: fixed
+  bottom: 110px
+  left: 15px
+  z-index: 1000000000
+
+.x-ray-right-align
+  right: 15px
+  left: auto
+
+  .x-ray-eye
+    right: 0
+    left: auto
+
+  .x-ray-wrench
+    right: 40px
+    left: auto
+
+  .x-ray-settings
+    right: 0
+    left: auto
+
+.x-ray-inner
+  position: relative
+
+  input[type=checkbox]
+    vertical-align: middle
+
+.x-ray-inner label
+  padding: 5px
+
+.x-ray-eye
+  position: absolute
+  bottom: -40px
+  left: 0
+  border-radius: 30px
+  display: inline-block
+  width: 35px
+  height: 35px
+  text-align: center
+  vertical-align: middle
+  background-color: #ffffff1a
+  -webkit-user-select: none
+  user-select: none
+  cursor: pointer
+  transition: 0.3s
+
+  &:hover
+    background-color: #eeeeee
+  &:active
+    background-color: #92b9f8
+
+  .vue-dd-focus
+    cursor: pointer
+
+.x-ray-wrench
+  position: absolute
+  bottom: -40px
+  left: 40px
+  cursor: pointer
+  border-radius: 30px
+  display: inline-block
+  width: 35px
+  height: 35px
+  text-align: center
+  vertical-align: middle
+  background-color: #ffffff1a
+  -webkit-backdrop-filter: blur(7px)
+  backdrop-filter: blur(7px)
+  -webkit-user-select: none
+  user-select: none
+  transition: 0.3s
+
+  &:hover
+    background-color: #eeeeee
+  &:active
+    background-color: #92b9f8
+
+.x-ray-settings
+  -webkit-box-shadow: 0px 2px 9px 1px #B4B4B4
+  box-shadow: 0px 2px 9px 1px #B4B4B4
+  border-radius: 5px
+  position: absolute
+  bottom: 5px
+  color: #333
+  left: 0
+  background-color: #ffffff
+  -webkit-backdrop-filter: blur(7px)
+  backdrop-filter: blur(7px)
+
+.x-ray-dark
+
+  .x-ray-settings
+    background-color: #000000
+    color: #fff
+
+.x-ray-floating
+  font-size: 25px
+  line-height: 35px
+  margin: 0 3px 0 3px
+  display: inline-block
+
+.x-ray-wrench-icon
+  background: -webkit-linear-gradient(60deg, #116dea, #00ff95 90%)
+  -webkit-background-clip: text
+  -webkit-text-fill-color: transparent
+  text-shadow: 0 0 #00000000
+
+.x-ray-ok
+  padding: 5px 15px 4px 15px
+  margin: 0 10px 10px 0
+  border: 0
+  border-radius: 5px
+  cursor: pointer
+  transition: 0.3s
+  font-weight: bold
+  text-transform: uppercase
+  color: #fff
+  background: #00ff95
+  background: -webkit-linear-gradient(60deg, #116dea, #00ff95 90%)
+
+  &:hover
+    background: #00ff95
+    background: -webkit-linear-gradient(60deg, #116dea, #00ff95 60%)
+
+  &:active
+    background: #00ff95
+    background: -webkit-linear-gradient(60deg, #00ff95, #116dea 100%)
 
 .logo
   margin-left: 3px

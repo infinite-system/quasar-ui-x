@@ -1,17 +1,24 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { onUnmounted, ref } from "vue";
 
 const dg = ref('dg')
+let timeout1 = null
+let timeout2 = null
 
 function switchState(){
-  setTimeout(() => {
-    dg.value.load('components/Simple')
-    setTimeout(() => {
-      dg.value.load()
-    }, 3000)
-  }, 3000)
-}
 
+    timeout1 = setTimeout(() => {
+      dg.value.load('components/Simple')
+      timeout2 = setTimeout(() => {
+        dg.value.load()
+      }, 3000)
+    }, 3000)
+
+}
+onUnmounted(() => {
+  clearTimeout(timeout1)
+  clearTimeout(timeout2)
+})
 </script>
 <template>
   <q-page padding>
