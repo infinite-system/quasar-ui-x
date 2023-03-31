@@ -577,8 +577,6 @@ function hide (obj) {
   extend(obj, hideAndDisableRedirect)
 }
 
-
-
 function toggleDarkMode (v, evt) {
   $q.dark.set(v)
   storage.set('darkMode', v)
@@ -683,7 +681,6 @@ function toggleDarkDd () {
 const Storage = sessionStorage
 
 
-
 const sticky = ref(true)
 
 const arrayOfObjects = ref([22, { obj: ref(false) }, { obj: ref(true) }])
@@ -698,9 +695,8 @@ function toggleSettings () {
   vueDdSettings.value = !vueDdSettings.value;
 }
 
-function dragstart_handler (ev) {
-  // Add the target element's id to the data transfer object
-  // ev.dataTransfer.setData("text/plain", ev.target.id);
+function toggleSave () {
+  save.value = !save.value;
 }
 
 function dragEnd (evt) {
@@ -710,12 +706,14 @@ function dragEnd (evt) {
   surround.value.style.bottom = rect.bottom + 'px'
   surround.value.style.left = rect.left + 'px'
 }
+
 const dd = ref(null)
 function toggleDd() {
   dd.value.toggle()
 }
 
 const right = ref(true)
+const save = ref(false)
 </script>
 <template>
   <q-layout view="hHh lpr fFf">
@@ -776,7 +774,7 @@ const right = ref(true)
               :model-value="actualVariable.value"
               :open-level="level"
               :focus-sticky="sticky"
-
+              :save="save"
               max-height="50vh"
               max-width="100%"
               :open-specific="specific" />
@@ -815,6 +813,7 @@ const right = ref(true)
               <div class="q-pa-sm">
                 <x-ray-checkbox label="dark" v-model="darkDd" />
                 <x-ray-checkbox label="right" @update:model-value="toggleSettings" v-model="right" />
+                <x-ray-checkbox label="save" @update:model-value="toggleSave" v-model="save" />
               </div>
 
               <div class="q-pa-sm col-grow" style="padding-right:0">
@@ -834,23 +833,15 @@ const right = ref(true)
         <br />
 
         <br />
-        <!--        {{  app.view.beforeWatch.value }} -->
 
-        <!--        <q-toggle v-model="app.dialog.search.props.modelValue" label="show" />-->
-        <!--            <pre>{{ account }}</pre>-->
-
-        <!--        <vue-dd name="search" v-model="search" />-->
-        <!--<pre>-->
-        <!--        {{ search }}-->
-        <!--</pre>-->
         <div v-for="item in data.items"
-             class="row q-pa-sm"
+             class="row q-pa-sm song"
              @click="go({ name: 'watch', query: { id: item.id } })">
           <div>
-            <img width="100" :src="`https://img.youtube.com/vi/${item.id}/0.jpg`">
+            <img width="200" :src="`https://img.youtube.com/vi/${item.id}/0.jpg`">
           </div>
           <div class="q-pa-sm">
-            {{ item.title }}<br />
+            <strong>{{ item.title }}</strong><br />
             {{ item.author }}<br />
           </div>
         </div>
@@ -1045,4 +1036,20 @@ const right = ref(true)
   -webkit-background-clip: text
   -webkit-text-fill-color: transparent
   text-shadow: 0 0 #00000000
+
+.song
+  border-radius: 10px
+  transition: 0.3s
+  cursor: pointer
+
+  &:hover
+    background: #eeeeee
+
+.body--dark .song
+  border-radius: 10px
+  transition: 0.3s
+  cursor: pointer
+
+  &:hover
+    background: #0000001a
 </style>

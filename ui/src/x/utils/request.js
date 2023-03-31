@@ -1,6 +1,6 @@
 /**
- * ax is a wrapper around an axios instance,
- * preconfigured to have a base URL and auth headers
+ * Request is a wrapper (currently) around an axios instance,
+ * It is preconfigured to have a base URL and auth headers
  * to interact with Laravel API
  */
 
@@ -12,6 +12,10 @@ let token;
 export function getCookie(name) {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? match[2] : null;
+}
+
+export function getTokenCookie() {
+  return getCookie('XSRF-TOKEN')
 }
 
 export function errorMsg(prefix, error) {
@@ -39,22 +43,22 @@ export function notify(type, msg) {
     actions: [{
       icon: 'close',
       color: 'white',
-      handler: () => {
-      },
-    },
-    ],
+      handler: () => {},
+    }],
   });
 }
 
 function getToken() {
 
   // get the XSRF-TOKEN from laravel
-  const token = getCookie('XSRF-TOKEN');
+  const token = getTokenCookie()
 
   // request it only if not already requested.
   if (token != null) {
     return new Promise(resolve => resolve(token));
   } else {
+    // the following must the native axios instance, not axios
+    // otherwise it will create circular loop
     return axios.get(process.env.BASE_URL + '/sanctum/csrf-cookie', {
       withCredentials: true
     }).catch(function (error) {
@@ -63,7 +67,7 @@ function getToken() {
   }
 }
 
-export const ax = axios.create({
+export const request = axios.create({
   baseURL: process.env.BASE_URL,
   withCredentials: true,
   headers: {
@@ -83,13 +87,13 @@ export const apiPath = path => {
 /**
  * Set token for authentication with Laravel Backend API
  */
-ax.interceptors.request.use(function (config) {
+request.interceptors.request.use(function (config) {
 
   token = getToken();
 
   return token.then(token => {
 
-    console.log('xsrf-token', token);
+    // console.log('xsrf-token', token);
 
     if (!token) {
       // there is no token
@@ -99,7 +103,7 @@ ax.interceptors.request.use(function (config) {
     }
 
     // set headers for ajax requests
-    config.headers['X-XSRF-TOKEN'] = getCookie('XSRF-TOKEN');
+    config.headers['X-XSRF-TOKEN'] = getTokenCookie()
 
     return config;
   });
@@ -112,29 +116,42 @@ ax.interceptors.request.use(function (config) {
 /**
  * Catch response errors
  */
-ax.interceptors.response.use(response => response, error => {
+request.interceptors.response.use(response => response, error => {
   notify('negative', errorMsg('Response error: ', error))
   return Promise.reject(error)
 });
 
 export function get(url, ...args) {
-  return ax.get(apiPath(url), ...args);
+  return request.get(apiPath(url), ...args);
 }
 
 export function post(url, ...args) {
-  return ax.post(apiPath(url), ...args);
+  return request.post(apiPath(url), ...args);
 }
 
-export async function initialState(to, next) {
-  const r = await get(to.fullPath);
-  to.meta.data = r.data
-  next()
+export async function redirect(router, url) {
+  return await router.push(cleanRoute(url));
 }
 
 function cleanRoute(url) {
   return url.replace(process.env.BASE_URL, '') || '/';
 }
 
-export async function redirect(router, url) {
-  return await router.push(cleanRoute(url));
+export const api = {
+  get,
+  post,
+  redirect
+}
+
+export async function initialState(to, next) {
+  to.meta.data = {}
+  try {
+    const r = await get(to.fullPath, { timeout:2000 });
+    if ('data' in r) {
+      to.meta.data = r.data
+    }
+  } catch (e) {
+    console.error('Could not load initial state for: ' + to.fullPath);
+  }
+  next()
 }

@@ -6,75 +6,78 @@
       'vue-dd-inline': inline,
       'vue-dd-open': openClass,
       'vue-dd-dark': dark,
+      'vue-dd-no-arrow': !arrow,
     }, $attrs.class]"
       :style="[cssVars, $attrs.style]">
     <node-primitive
-        v-if="primitive"
+      v-if="primitive"
 
-        :root="$refs.root"
-        :rootId="rootId"
+      :root="$refs.root"
+      :rootId="rootId"
 
-        :modelValue="modelValue"
-        :name="name"
-        :focus="useFocus"
-        :escapeQuotes="escapeQuotes"
-        :save="save"
-        :saveFocus="saveFocus"
-        :delimiter="delimiter"
+      :modelValue="modelValue"
+      :name="name"
+      :focus="useFocus"
+      :escapeQuotes="escapeQuotes"
+      :save="save"
+      :saveFocus="saveFocus"
+      :delimiter="delimiter"
 
-        pointer=""
-        :type="type"
-        :parentOpen="false"
-        parentType=""
+      pointer=""
+      :type="type"
+      :parentOpen="false"
+      parentType=""
 
-        :escapeQuotesFn="escapeQuotesFn"
-        :emitFn="emitFn"
+      :escapeQuotesFn="escapeQuotesFn"
+      :emitFn="emitFn"
 
-        @focus="focusEmit"
-        @show="showEmit"
+      @focus="focusEmit"
+      @show="showEmit"
     />
     <node-complex
-        v-else
+      v-else
 
-        ref="nodeComplex"
-        :root="$refs.root"
-        :rootId="rootId"
+      ref="nodeComplex"
+      :root="$refs.root"
+      :rootId="rootId"
 
-        :modelValue="modelValue"
-        :name="name"
-        :openLevel="useOpenLevel"
-        :openSpecific="useOpenSpecific"
-        :focus="useFocus"
-        :escapeQuotes="escapeQuotes"
-        :startClosed="startClosed"
-        :longText="longText"
-        :preview="preview"
-        :previewInitial="previewInitial"
-        :deep="isRef ? true : deep"
-        :watch="watch"
-        :save="save"
-        :saveFocus="saveFocus"
-        :arrow="arrow"
-        :delimiter="delimiter"
-        :more="more"
+      :modelValue="modelValue"
+      :name="name"
+      :openLevel="useOpenLevel"
+      :openSpecific="useOpenSpecific"
+      :focus="useFocus"
+      :escapeQuotes="escapeQuotes"
+      :startClosed="startClosed"
+      :longText="longText"
+      :preview="preview"
+      :previewInitial="previewInitial"
+      :deep="isRef ? true : deep"
+      :watch="watch"
+      :save="save"
+      :saveFocus="saveFocus"
+      :arrow="arrow"
+      :arrowOpen="arrowOpen"
+      :arrowClosed="arrowClosed"
+      :delimiter="delimiter"
+      :more="more"
 
-        pointer=""
-        :type="type"
-        parentType=""
-        :parentOpen="false"
-        :shared="shared"
+      pointer=""
+      :type="type"
+      parentType=""
+      :parentOpen="false"
+      :shared="shared"
 
-        :getTypeFn="getTypeFn"
-        :isPrimitiveFn="isPrimitiveFn"
-        :escapeQuotesFn="escapeQuotesFn"
-        :unwrapSpecificFn="unwrapSpecificFn"
-        :emitFn="emitFn"
+      :getTypeFn="getTypeFn"
+      :isPrimitiveFn="isPrimitiveFn"
+      :escapeQuotesFn="escapeQuotesFn"
+      :unwrapSpecificFn="unwrapSpecificFn"
+      :emitFn="emitFn"
 
-        @show="showEmit"
-        @toggle="toggleEmit"
-        @open="openEmit"
-        @focus="focusEmit"
-        @forget="forgetEmit"
+      @show="showEmit"
+      @toggle="toggleEmit"
+      @open="openEmit"
+      @focus="focusEmit"
+      @forget="forgetEmit"
     />
   </div>
 </template>
@@ -112,7 +115,9 @@ export default defineComponent({
     delimiter: { type: String, default: '.' },
     more: { type: String, default: '...' },
     // styling options
-    arrow: { type: String, default: '&#x25BC;' },
+    arrow: { type: Boolean, default: true },
+    arrowOpen: { type: String, default: '&#x25BC;' },
+    arrowClosed: { type: String, default: '&#x25BC;' },
     inline: { type: Boolean, default: true },
     dark: { type: Boolean, default: true },
     fontFamily: { type: String, default: '"JetBrains Mono", "Courier", serif' },
@@ -370,6 +375,8 @@ export default defineComponent({
         // add class to main vue-dd container class named 'vue-dd-open'
         this.openClass = isOpen
       }
+
+
       // console.log('isOpen', isOpen, 'pointer', pointer, 'level', level)
       this.$emit('open', setup)
     },
@@ -379,13 +386,17 @@ export default defineComponent({
 
       if (this.save) {
 
+        const pointerIsSet = pointer in this.unwrapSpecific
+
         if (isOpen) {
 
           // remove shared pointer to prevent re-opening
           delete this.shared.hiddenPointers[pointer]
 
+          if (!pointerIsSet){
+            this.useOpenSpecific.push(pointer)
+          }
           // add specific pointer
-          this.useOpenSpecific.push(pointer)
 
           // add to memory store
           this.memory.open[pointer] = true
@@ -397,10 +408,12 @@ export default defineComponent({
           // via user toggle click
           this.shared.hiddenPointers[pointer] = true
 
-          // if we find this specific opened pointer
-          const findKey = this.useOpenSpecific.indexOf(pointer)
-          if (findKey >= 0) {
-            delete this.useOpenSpecific[findKey]
+          if (pointerIsSet){
+            // if we find this specific opened pointer
+            const findKey = this.useOpenSpecific.indexOf(pointer)
+            if (findKey >= 0) {
+              delete this.useOpenSpecific[findKey]
+            }
           }
 
           // delete from memory
@@ -537,6 +550,9 @@ export default defineComponent({
       }
     },
     openSpecific () {
+      this.useOpenSpecific = this.getOpenSpecific()
+    },
+    save () {
       this.useOpenSpecific = this.getOpenSpecific()
     }
   },
