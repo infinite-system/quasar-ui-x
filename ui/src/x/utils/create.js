@@ -1,6 +1,6 @@
 import { createApp, createVNode, render, h, defineComponent } from "vue";
 import XDialog from "../dialog/XDialog.vue";
-import { extend } from "../utils.js";
+import extend from "./extend";
 
 // @adopted from https://stackoverflow.com/questions/69488256/vue-3-append-component-to-the-dom-best-practice
 export default function createComponent ({ app, component, props, el }) {

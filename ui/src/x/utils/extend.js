@@ -27,16 +27,18 @@ function _extend (target, sources, parents) {
 
   if (!sources.length) return target;
 
-  parents = parents || [];
-  const source = sources.shift();
+  // parents object to detect circular references
+  parents = parents || new Map();
+  // save target object in Map as a key
+  parents.set(target, true)
 
-  parents.push(target)
+  const source = sources.shift();
 
   if (isObject(target) && isObject(source)) {
     for (let key in source) {
       if (isObject(source[key])) {
-        // detect circular references
-        if (parents.indexOf(source[key]) >= 0) {
+        // detect circular references using Map parents object
+        if (parents.has(source[key])) {
           // console.log('detected circular reference key:', key,
           // 'value:', source[key],
           // 'parents:', [...parents])

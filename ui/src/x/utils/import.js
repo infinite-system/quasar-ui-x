@@ -3,62 +3,62 @@ import { isFunction, isObject, isPromise, isString } from './is.js'
 import { err } from './log.js'
 import { toText } from "./strings";
 
-export function customAsyncComponent (component) {
+// export function customAsyncComponent (component) {
+//
+//   return defineAsyncComponent({
+//
+//     loader: component,
+//
+//     loadingComponent: defineComponent({
+//       setup () {
+//         return () => h('div', { 'style': 'padding:20px;text-align:center;' }, 'Loading...')
+//       }
+//     }),
+//
+//     errorComponent: defineComponent({
+//       setup () {
+//         return () => h('div', `Error: Cannot find component ${toText(component)}`)
+//       }
+//     })
+//   })
+// }
 
-  return defineAsyncComponent({
+// export function resolveImport (fn = dynamicImport) {
+//   /**
+//    * Return callback function.
+//    * This is necessary to make dynamic imports work properly,
+//    * if this is being used as a Quasar App Extension
+//    */
+//   return (component) => {
+//
+//     let c = component;
+//
+//     switch (typeof component) {
+//       case 'function': // handle: () => import('...')
+//         c = customAsyncComponent(component)
+//         break;
+//       case 'object':
+//         c = isPromise(component)
+//           ? customAsyncComponent(() => component) // handle import('../ComponentName...')
+//           : component // direct import by component itself
+//         break;
+//       case 'string':
+//         c = customAsyncComponent(fn(component))
+//         break;
+//     }
+//
+//     // markRaw to make component object non reactive
+//     return markRaw(c);
+//   }
+// }
 
-    loader: component,
+// export function setupImport () {
+//   return resolveImport(dynamicImport)
+// }
 
-    loadingComponent: defineComponent({
-      setup () {
-        return () => h('div', { 'style': 'padding:20px;text-align:center;' }, 'Loading...')
-      }
-    }),
-
-    errorComponent: defineComponent({
-      setup () {
-        return () => h('div', `Error: Cannot find component ${toText(component)}`)
-      }
-    })
-  })
-}
-
-export function resolveImport (fn = dynamicImport) {
-  /**
-   * Return callback function.
-   * This is necessary to make dynamic imports work properly,
-   * if this is being used as a Quasar App Extension
-   */
-  return (component) => {
-
-    let c = component;
-
-    switch (typeof component) {
-      case 'function': // handle: () => import('...')
-        c = customAsyncComponent(component)
-        break;
-      case 'object':
-        c = isPromise(component)
-          ? customAsyncComponent(() => component) // handle import('../ComponentName...')
-          : component // direct import by component itself
-        break;
-      case 'string':
-        c = customAsyncComponent(fn(component))
-        break;
-    }
-
-    // markRaw to make component object non reactive
-    return markRaw(c);
-  }
-}
-
-export function setupImport () {
-  return resolveImport(dynamicImport)
-}
-
-export function dynamicImport (component) {
-  return () => import(`src/${component}.vue`)
-}
+// export function dynamicImport (component) {
+//   return () => import(`src/${component}.vue`)
+// }
 
 export function dynamicImporter (component) {
   return import(`src/${component}.vue`)
@@ -105,6 +105,6 @@ export function setupAsyncImport (asyncFn = dynamicImporter, timeout = 0) {
   return (component) => asyncImport(component, asyncFn, timeout)
 }
 
-export function smartImport (component, fn = dynamicImport) {
-  return resolveImport(fn)(component)
-}
+// export function smartImport (component, fn = dynamicImport) {
+//   return resolveImport(fn)(component)
+// }

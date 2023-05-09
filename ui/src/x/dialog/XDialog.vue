@@ -3,7 +3,7 @@
 import { ref, watch, computed, toRefs, defineProps, onBeforeUnmount, useSlots, isRef, shallowRef, reactive, toRaw, onMounted, onUpdated, onRenderTriggered, onRenderTracked } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { dbg, warn, extend, byId, onFrame, isFunction, isObject, sleep, isArray } from '../utils.js'
+import { dbg, warn, extend, byId, onFrame, isFunction, isObject, sleep, isArray } from '../utils'
 import {
   dialogId, remove, wrap, parseOptions, setButtonDefaults,
   fix_Android_Mobile_Browser_Maximized_Bottom_Navbar_Overflow

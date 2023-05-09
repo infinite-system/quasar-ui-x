@@ -32,7 +32,7 @@ export function extendHistory () {
 
 }
 
-const xHistory = {
+export const xHistory = {
   isFirstLoad: true,
   direction: null,
   /**
@@ -57,5 +57,3 @@ const xHistory = {
     return direction
   }
 }
-
-export default xHistory

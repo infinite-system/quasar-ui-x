@@ -30,7 +30,8 @@ import ExampleComponent from 'components/ExampleComponent.vue';
 import { getCurrentInstance,onMounted, ref } from 'vue';
 import { useQuasar } from 'quasar'
 
-import {  useX } from 'quasar-ui-x'
+import { useX, utils } from 'quasar-ui-x'
+const { keepAlive } = utils
 import VueDd from '../components/vue-dd/VueDd.vue'
 import FileTree from '../components/FileTree.vue'
 
@@ -76,6 +77,7 @@ const tree =  [
 // console.log('Vue', getCurrentInstance())
 const $q = useQuasar()
 const $x = useX()
+console.log('keepAlive', keepAlive)
 // $x.dialog({})
 const dialog = ref<XDialog>(null)
 // const dialog = ref(null)

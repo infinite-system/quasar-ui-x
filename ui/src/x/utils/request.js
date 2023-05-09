@@ -6,19 +6,25 @@
 
 import axios from 'axios';
 import { Notify } from 'quasar'
+import router from '@/router';
+
+
 
 let token;
 
-export function getCookie(name) {
+export function getCookie (name) {
+  // console.log('allcookies', document.cookie)
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? match[2] : null;
 }
 
-export function getTokenCookie() {
-  return getCookie('XSRF-TOKEN')
+export function getTokenCookie () {
+  const token = getCookie('XSRF-TOKEN')
+  if (token == null) return token;
+  return String(token).replace('%3D', '=')
 }
 
-export function errorMsg(prefix, error) {
+export function errorMsg (prefix, error) {
 
   let msg = '';
 
@@ -34,7 +40,7 @@ export function errorMsg(prefix, error) {
   return msg;
 }
 
-export function notify(type, msg) {
+export function notify (type, msg) {
   Notify.create({
     type: type,
     message: msg,
@@ -48,10 +54,12 @@ export function notify(type, msg) {
   });
 }
 
-function getToken() {
+function getToken () {
 
   // get the XSRF-TOKEN from laravel
   const token = getTokenCookie()
+
+  console.log('token', token)
 
   // request it only if not already requested.
   if (token != null) {
@@ -60,8 +68,8 @@ function getToken() {
     // the following must the native axios instance, not axios
     // otherwise it will create circular loop
     return axios.get(process.env.BASE_URL + '/sanctum/csrf-cookie', {
-      withCredentials: true
-    }).catch(function (error) {
+      withCredentials: true,
+    }).catch(function(error) {
       notify('negative', errorMsg('Could not set auth cookie.', error));
     });
   }
@@ -72,7 +80,10 @@ export const request = axios.create({
   withCredentials: true,
   headers: {
     'X-Requested-With': 'XMLHttpRequest',
-    'Access-Control-Allow-Origin': '*',
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Origin, Content-Type, X-Auth-Token",
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   }
@@ -87,7 +98,7 @@ export const apiPath = path => {
 /**
  * Set token for authentication with Laravel Backend API
  */
-request.interceptors.request.use(function (config) {
+request.interceptors.request.use(function(config) {
 
   token = getToken();
 
@@ -102,6 +113,7 @@ request.interceptors.request.use(function (config) {
       return false;
     }
 
+    console.log('getTokenCookie()', getTokenCookie())
     // set headers for ajax requests
     config.headers['X-XSRF-TOKEN'] = getTokenCookie()
 
@@ -117,23 +129,40 @@ request.interceptors.request.use(function (config) {
  * Catch response errors
  */
 request.interceptors.response.use(response => response, error => {
-  notify('negative', errorMsg('Response error: ', error))
+
+  if ('response' in error
+    && 'data' in error.response
+    && 'errors' in error.response.data
+    && 'message' in error.response.data.errors
+    && error.response.data.errors.message === "Unauthenticated."
+    && 'status_code' in error.response.data.errors
+    && error.response.data.errors.status_code === 500
+  ) {
+    setTimeout(() => {
+      window.location.href = router().resolve({ name: 'login', params: { locale: 'en-ca'}, query: { you_ve_been_logged_out: 1} }).href;
+    }, 3500)
+    notify('negative', 'You have been logged out. Redirecting to login...')
+  } else {
+    notify('negative', errorMsg('Response error: ', error))
+  }
+
   return Promise.reject(error)
 });
 
-export function get(url, ...args) {
+export function get (url, ...args) {
   return request.get(apiPath(url), ...args);
 }
 
-export function post(url, ...args) {
+export function post (url, ...args) {
   return request.post(apiPath(url), ...args);
 }
 
-export async function redirect(router, url) {
-  return await router.push(cleanRoute(url));
+export async function redirect (router, location) {
+  // console.log('cleanRoute(url)', cleanRoute(url))
+  return await router.push(location);
 }
 
-function cleanRoute(url) {
+function cleanRoute (url) {
   return url.replace(process.env.BASE_URL, '') || '/';
 }
 
@@ -143,12 +172,13 @@ export const api = {
   redirect
 }
 
-export async function initialState(to, next) {
+export async function initialState (to, next) {
   to.meta.data = {}
+  console.log('load initial state....')
   try {
-    const r = await get(to.fullPath, { timeout:2000 });
-    if ('data' in r) {
-      to.meta.data = r.data
+    const response = await get(to.fullPath, { timeout: 5000 });
+    if ('data' in response) {
+      to.meta.data = response.data
     }
   } catch (e) {
     console.error('Could not load initial state for: ' + to.fullPath);

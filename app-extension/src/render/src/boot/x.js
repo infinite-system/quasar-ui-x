@@ -1,5 +1,5 @@
 import { boot } from 'quasar/wrappers'
-import X, { XDialogLoading, XDialogError, payloadFn, redirectFn } from 'quasar-ui-x'
+import X, { XDialogLoading, XDialogError, helpers } from 'quasar-ui-x'
 
 export default boot(({ app }) => {
   const config = {
@@ -12,8 +12,8 @@ export default boot(({ app }) => {
         timeout: 0,
         pretty: true
       },
-      payload: { on: true, fn: payloadFn },
-      dismiss: { redirect: { on: true, fn: redirectFn } },
+      payload: { on: true, fn: helpers.payloadFn },
+      dismiss: { redirect: { on: true, fn: helpers.redirectFn } },
       router: { restart: false, emit: false }
     }
   }

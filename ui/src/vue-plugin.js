@@ -4,23 +4,19 @@ import XDialogError from './x/dialog/XDialogError.vue'
 import XDialogComponent from './x/dialog/XDialogComponent.vue'
 import XDialogLink from './x/dialog-link/XDialogLink.vue'
 import XLink from './x/link/XLink.vue'
-import { xDialog, payloadFn, redirectFn } from './x/dialog/XDialogHelpers.js'
-import ListenerTracker from "./x/utils/events";
-import { setupAsyncImport } from './x/utils/import.js'
-import { isAsync } from './x/utils/is.js'
-import extend from './x/utils/extend.js'
-import { useX } from './x/utils/use-x'
-import xHistory, { extendHistory } from "./x/utils/private/extend-history";
+
+import * as helpers from './x/dialog/XDialogHelpers.js'
+import * as utils from './x/utils'
 
 const version = __UI_VERSION__
 
 function install (app, options) {
 
-  ListenerTracker.init()
+  utils.ListenerTracker.init()
 
   if (options && 'XDialog' in options) {
     const defaults = XDialog.props.config.default()
-    extend(defaults, options.XDialog)
+    utils.extend(defaults, options.XDialog)
     XDialog.props.config.default = () => defaults
   }
 
@@ -32,46 +28,50 @@ function install (app, options) {
   app.component(XDialogLink.name, XDialogLink)
   app.component(XLink.name, XLink)
 
-  extendHistory()
+  utils.extendHistory()
 
   const provideX = {
-    dialog: xDialog(app),
-    history: xHistory
+    dialog: helpers.xDialog(app),
+    history: utils.xHistory,
+    helpers: helpers,
+    utils: utils
   }
 
   app.provide('$x', provideX)
 }
 
+const useX = utils.useX;
+
 export {
   version,
-  useX,
+  install,
+
   XDialog,
   XDialogComponent,
   XDialogLoading,
   XDialogError,
   XDialogLink,
   XLink,
-  isAsync,
-  setupAsyncImport,
-  payloadFn,
-  redirectFn,
-  ListenerTracker,
-  install
+
+  helpers,
+  utils,
+
+  useX
 }
 
 export default {
   version,
-  useX,
+  install,
+
   XDialog,
   XDialogComponent,
   XDialogLoading,
   XDialogError,
   XDialogLink,
   XLink,
-  isAsync,
-  setupAsyncImport,
-  payloadFn,
-  redirectFn,
-  ListenerTracker,
-  install
+
+  helpers,
+  utils,
+
+  useX
 }

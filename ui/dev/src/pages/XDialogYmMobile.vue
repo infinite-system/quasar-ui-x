@@ -337,10 +337,10 @@ const dialog = {
 
 const accountslugOriginalClass = dialog.accountslug.props.options.class
 
-console.log('dialog', dialog)
 // app.dialog = dialog
 //
 extend(app, { dialog })
+console.log('app', app)
 
 // console.log('app.dialog', dialog)
 
