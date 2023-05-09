@@ -8,10 +8,10 @@ import extend from './utils/extend.js'
 import prop from './utils/prop'
 import size from './utils/size'
 import sleep from './utils/sleep'
-import { dynamicImport, smartImport } from './utils/import'
 import onFrame from './utils/on-frame'
 import { useX } from './utils/use-x'
 import { storage, session } from './utils/storage'
+
 export {
   useX,
   byId,
@@ -37,8 +37,6 @@ export {
   prop,
   size,
   sleep,
-  dynamicImport,
-  smartImport,
   onFrame,
   storage,
   session
